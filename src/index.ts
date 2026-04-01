@@ -106,10 +106,11 @@ function resolveProviders(): string[] {
 
 async function main() {
   const selected = resolveProviders();
+  const isAll = selected.length === Object.keys(PROVIDERS).length;
 
   const server = new McpServer({
     name: "sports-hub",
-    version: "1.0.0",
+    version: "1.1.0",
   });
 
   // Load and register selected providers
@@ -128,9 +129,70 @@ async function main() {
     }
   }
 
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-  console.error(`Sports Hub running — ${selected.length} providers loaded`);
+  // Warn about tool bloat
+  if (isAll) {
+    console.error("");
+    console.error("  ⚠ All 29 providers loaded (319 tools).");
+    console.error("    LLMs work best with fewer tools. Consider using a preset:");
+    console.error("    SPORTS_HUB_PROVIDERS=free       → 9 providers, ~98 tools (no keys needed)");
+    console.error("    SPORTS_HUB_PROVIDERS=us-major   → 7 providers, ~79 tools");
+    console.error("    SPORTS_HUB_PROVIDERS=soccer     → 6 providers, ~69 tools");
+    console.error("");
+  }
+
+  // Transport: stdio (default) or HTTP (--http flag or SPORTS_HUB_HTTP=1)
+  const useHttp = process.argv.includes("--http") || process.env.SPORTS_HUB_HTTP === "1";
+  const port = parseInt(process.env.SPORTS_HUB_PORT ?? "3000", 10);
+
+  if (useHttp) {
+    const { createServer } = await import("node:http");
+    const { StreamableHTTPServerTransport } = await import(
+      "@modelcontextprotocol/sdk/server/streamableHttp.js"
+    );
+    const { randomUUID } = await import("node:crypto");
+
+    const transport = new StreamableHTTPServerTransport({
+      sessionIdGenerator: () => randomUUID(),
+    });
+
+    await server.connect(transport);
+
+    const httpServer = createServer((req, res) => {
+      // CORS headers
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
+      res.setHeader("Access-Control-Allow-Headers", "Content-Type, mcp-session-id, Accept");
+      res.setHeader("Access-Control-Expose-Headers", "mcp-session-id");
+
+      if (req.method === "OPTIONS") {
+        res.writeHead(204);
+        res.end();
+        return;
+      }
+
+      // Route /mcp and / to the transport
+      const path = req.url?.split("?")[0] ?? "/";
+      if (path === "/mcp" || path === "/") {
+        transport.handleRequest(req, res);
+      } else if (path === "/health") {
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ status: "ok", providers: selected.length }));
+      } else {
+        res.writeHead(404);
+        res.end("Not found. Use POST /mcp for MCP protocol.");
+      }
+    });
+
+    httpServer.listen(port, () => {
+      console.error(`Sports Hub HTTP running — ${selected.length} providers on http://localhost:${port}`);
+      console.error(`  POST /mcp     → MCP protocol (Streamable HTTP)`);
+      console.error(`  GET  /health  → Health check`);
+    });
+  } else {
+    const transport = new StdioServerTransport();
+    await server.connect(transport);
+    console.error(`Sports Hub running — ${selected.length} providers loaded (stdio)`);
+  }
 }
 
 main().catch((err) => {

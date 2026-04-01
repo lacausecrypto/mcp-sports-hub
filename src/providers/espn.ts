@@ -65,7 +65,8 @@ export function register(server: McpServer): void {
         const data = await fetchJson(url);
         return toolResult(data);
       } catch (err) {
-        return errorResult(err instanceof Error ? err.message : String(err));
+        const msg = err instanceof Error ? err.message : String(err);
+      return errorResult(`[ESPN — unofficial API] ${msg}. If ESPN is down, try: sportsdb_search_teams, bdl_get_games, or apisports_get_fixtures as alternatives.`);
       }
     },
   );
@@ -92,7 +93,8 @@ export function register(server: McpServer): void {
         const data = await fetchJson(url);
         return toolResult(data);
       } catch (err) {
-        return errorResult(err instanceof Error ? err.message : String(err));
+        const msg = err instanceof Error ? err.message : String(err);
+      return errorResult(`[ESPN — unofficial API] ${msg}. If ESPN is down, try: sportsdb_search_teams, bdl_get_games, or apisports_get_fixtures as alternatives.`);
       }
     },
   );
@@ -119,7 +121,8 @@ export function register(server: McpServer): void {
         const data = await fetchJson(url);
         return toolResult(data);
       } catch (err) {
-        return errorResult(err instanceof Error ? err.message : String(err));
+        const msg = err instanceof Error ? err.message : String(err);
+      return errorResult(`[ESPN — unofficial API] ${msg}. If ESPN is down, try: sportsdb_search_teams, bdl_get_games, or apisports_get_fixtures as alternatives.`);
       }
     },
   );
@@ -139,7 +142,8 @@ export function register(server: McpServer): void {
         const data = await fetchJson(url);
         return toolResult(data);
       } catch (err) {
-        return errorResult(err instanceof Error ? err.message : String(err));
+        const msg = err instanceof Error ? err.message : String(err);
+      return errorResult(`[ESPN — unofficial API] ${msg}. If ESPN is down, try: sportsdb_search_teams, bdl_get_games, or apisports_get_fixtures as alternatives.`);
       }
     },
   );
@@ -159,7 +163,8 @@ export function register(server: McpServer): void {
         const data = await fetchJson(url);
         return toolResult(data);
       } catch (err) {
-        return errorResult(err instanceof Error ? err.message : String(err));
+        const msg = err instanceof Error ? err.message : String(err);
+      return errorResult(`[ESPN — unofficial API] ${msg}. If ESPN is down, try: sportsdb_search_teams, bdl_get_games, or apisports_get_fixtures as alternatives.`);
       }
     },
   );
@@ -185,7 +190,8 @@ export function register(server: McpServer): void {
         const data = await fetchJson(url);
         return toolResult(data);
       } catch (err) {
-        return errorResult(err instanceof Error ? err.message : String(err));
+        const msg = err instanceof Error ? err.message : String(err);
+      return errorResult(`[ESPN — unofficial API] ${msg}. If ESPN is down, try: sportsdb_search_teams, bdl_get_games, or apisports_get_fixtures as alternatives.`);
       }
     },
   );
@@ -205,7 +211,8 @@ export function register(server: McpServer): void {
         const data = await fetchJson(url);
         return toolResult(data);
       } catch (err) {
-        return errorResult(err instanceof Error ? err.message : String(err));
+        const msg = err instanceof Error ? err.message : String(err);
+      return errorResult(`[ESPN — unofficial API] ${msg}. If ESPN is down, try: sportsdb_search_teams, bdl_get_games, or apisports_get_fixtures as alternatives.`);
       }
     },
   );
@@ -225,7 +232,8 @@ export function register(server: McpServer): void {
         const data = await fetchJson(url);
         return toolResult(data);
       } catch (err) {
-        return errorResult(err instanceof Error ? err.message : String(err));
+        const msg = err instanceof Error ? err.message : String(err);
+      return errorResult(`[ESPN — unofficial API] ${msg}. If ESPN is down, try: sportsdb_search_teams, bdl_get_games, or apisports_get_fixtures as alternatives.`);
       }
     },
   );
@@ -252,7 +260,8 @@ export function register(server: McpServer): void {
         const data = await fetchJson(url);
         return toolResult(data);
       } catch (err) {
-        return errorResult(err instanceof Error ? err.message : String(err));
+        const msg = err instanceof Error ? err.message : String(err);
+      return errorResult(`[ESPN — unofficial API] ${msg}. If ESPN is down, try: sportsdb_search_teams, bdl_get_games, or apisports_get_fixtures as alternatives.`);
       }
     },
   );
@@ -271,7 +280,8 @@ export function register(server: McpServer): void {
         const data = await fetchJson(url);
         return toolResult(data);
       } catch (err) {
-        return errorResult(err instanceof Error ? err.message : String(err));
+        const msg = err instanceof Error ? err.message : String(err);
+      return errorResult(`[ESPN — unofficial API] ${msg}. If ESPN is down, try: sportsdb_search_teams, bdl_get_games, or apisports_get_fixtures as alternatives.`);
       }
     },
   );
