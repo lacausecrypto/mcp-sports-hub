@@ -54,7 +54,7 @@ A unified MCP server that aggregates **29 sports API providers** into a single s
 | **Zed** | Supported | Built-in MCP |
 | **ChatGPT Desktop** | Supported | OpenAI desktop app |
 | **Gemini CLI** | Supported | Google CLI |
-| **Any MCP client** | Supported | Standard stdio transport |
+| **Any MCP client** | Supported | Stdio + HTTP/SSE transport |
 
 Uses the **stdio transport** from the [MCP SDK](https://modelcontextprotocol.io). Works with any LLM (Claude, GPT, Gemini, Llama, Mistral, etc.).
 
@@ -125,6 +125,30 @@ cd mcp-sports-hub
 npm install
 npm run build
 ```
+
+## Transport Modes
+
+### Stdio (default — Claude Desktop, Cursor, etc.)
+
+```bash
+npx mcp-sports-hub
+```
+
+### HTTP/SSE (remote clients, web apps, custom integrations)
+
+```bash
+# Via flag
+npx mcp-sports-hub --http
+
+# Via env
+SPORTS_HUB_HTTP=1 SPORTS_HUB_PORT=3000 npx mcp-sports-hub
+```
+
+Endpoints:
+- `POST /mcp` — MCP protocol (Streamable HTTP with SSE)
+- `GET /health` — Health check (`{"status":"ok","providers":9}`)
+
+Supports CORS, session management via `mcp-session-id` header. Default port: 3000.
 
 ## Configuration
 

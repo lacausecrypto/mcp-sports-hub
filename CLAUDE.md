@@ -146,7 +146,29 @@ In Claude Desktop config:
 LLMs work best with fewer, focused tools. Recommendations:
 - **General use**: `free` preset (9 providers, ~98 tools)
 - **Specific sport**: use the sport preset (`f1`, `soccer`, `esports`, etc.)
-- **Full access**: omit `SPORTS_HUB_PROVIDERS` (all 319 tools — works but slower tool selection)
+- **Full access**: `SPORTS_HUB_PROVIDERS=all` (319 tools — works but slower tool selection)
+
+## Transport
+
+Two modes available:
+
+**Stdio** (default) — for Claude Desktop, Cursor, Windsurf, Cline, etc.:
+```bash
+npx mcp-sports-hub
+```
+
+**HTTP/SSE** — for remote clients, web apps, custom integrations:
+```bash
+SPORTS_HUB_HTTP=1 npx mcp-sports-hub
+# POST /mcp    → MCP Streamable HTTP (SSE)
+# GET  /health → {"status":"ok","providers":9}
+```
+
+Port configurable via `SPORTS_HUB_PORT` (default 3000). CORS enabled.
+
+## Cache
+
+All GET responses are cached in memory for 60 seconds. This protects rate-limited providers from duplicate calls within the same conversation. Configure with `SPORTS_HUB_CACHE_TTL` (seconds, 0 to disable).
 
 ## Setup
 
@@ -155,13 +177,15 @@ npm install && npm run build
 node dist/index.js
 ```
 
+Or just: `npx mcp-sports-hub`
+
 Set env vars for providers you need. Missing keys don't block startup.
 
 ## Project Structure
 
 ```
-src/index.ts           → Lazy-imports + registers selected providers, starts stdio
-src/shared/http.ts     → fetchJson(), buildUrl(), toolResult(), errorResult()
+src/index.ts           → Lazy-imports, provider filtering, stdio/HTTP transport
+src/shared/http.ts     → fetchJson() with TTL cache, buildUrl(), toolResult(), errorResult()
 src/providers/*.ts     → One file per API, exports register(server)
 src/tests/smoke.test.mjs → 118 smoke tests (run: npm test)
 ```
