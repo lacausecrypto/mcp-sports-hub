@@ -1,0 +1,59 @@
+{
+  "name": "@sports-mcp/hub",
+  "version": "1.0.0",
+  "description": "Unified MCP server — 29 sports API providers, 319 tools. Scores, stats, odds, esports, and more.",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "mcp-sports-hub": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CLAUDE.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsc --watch",
+    "prepublishOnly": "npm run build",
+    "test": "node --test src/tests/smoke.test.mjs"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "sports",
+    "api",
+    "nfl",
+    "nba",
+    "mlb",
+    "nhl",
+    "soccer",
+    "f1",
+    "tennis",
+    "cricket",
+    "mma",
+    "esports",
+    "odds",
+    "golf",
+    "college-football",
+    "ncaa"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sports-mcp/hub.git"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0"
+  }
+}
