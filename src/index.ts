@@ -47,7 +47,8 @@ const PROVIDERS: Record<string, () => Promise<{ register: (s: McpServer) => void
 // ---------------------------------------------------------------------------
 // SPORTS_HUB_PROVIDERS controls which providers to load.
 //
-//   Not set / empty    → load ALL 29 providers (319 tools)
+//   Not set / empty    → load "free" preset (9 providers, ~98 tools)
+//   "all"              → load ALL 29 providers (319 tools)
 //   "espn,nhl,mlb"     → load only these 3 (36 tools)
 //   "-odds,-oddsio"    → load all EXCEPT these (prefix with -)
 //
@@ -73,7 +74,8 @@ const PRESETS: Record<string, string[]> = {
 
 function resolveProviders(): string[] {
   const env = process.env.SPORTS_HUB_PROVIDERS?.trim();
-  if (!env) return Object.keys(PROVIDERS);
+  if (!env) return PRESETS["free"]; // Default to free providers only
+  if (env === "all") return Object.keys(PROVIDERS);
 
   // Check for preset
   if (PRESETS[env]) return PRESETS[env];

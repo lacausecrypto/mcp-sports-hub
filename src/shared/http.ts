@@ -5,16 +5,65 @@
 export interface HttpOptions {
   headers?: Record<string, string>;
   method?: "GET" | "POST";
+  /** Cache TTL in seconds. 0 = no cache (default). */
+  cacheTtl?: number;
 }
 
+// ---------------------------------------------------------------------------
+// In-memory cache (simple TTL-based)
+// ---------------------------------------------------------------------------
+
+interface CacheEntry {
+  data: unknown;
+  expiresAt: number;
+}
+
+const cache = new Map<string, CacheEntry>();
+
+const DEFAULT_CACHE_TTL = parseInt(process.env.SPORTS_HUB_CACHE_TTL ?? "60", 10);
+
+function getCached(key: string): unknown | undefined {
+  const entry = cache.get(key);
+  if (!entry) return undefined;
+  if (Date.now() > entry.expiresAt) {
+    cache.delete(key);
+    return undefined;
+  }
+  return entry.data;
+}
+
+function setCache(key: string, data: unknown, ttl: number): void {
+  cache.set(key, { data, expiresAt: Date.now() + ttl * 1000 });
+  // Evict old entries if cache grows too large (>500 entries)
+  if (cache.size > 500) {
+    const now = Date.now();
+    for (const [k, v] of cache) {
+      if (now > v.expiresAt) cache.delete(k);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// HTTP
+// ---------------------------------------------------------------------------
+
 /**
- * Fetch JSON from a URL with standard error handling.
+ * Fetch JSON from a URL with standard error handling and optional caching.
+ * Cache is keyed on URL + method. Set cacheTtl (seconds) or env SPORTS_HUB_CACHE_TTL (default 60).
  */
 export async function fetchJson(
   url: string,
   options: HttpOptions = {},
 ): Promise<unknown> {
-  const { headers = {}, method = "GET" } = options;
+  const { headers = {}, method = "GET", cacheTtl } = options;
+  const ttl = cacheTtl ?? (method === "GET" ? DEFAULT_CACHE_TTL : 0);
+
+  // Check cache for GET requests
+  const cacheKey = `${method}:${url}`;
+  if (ttl > 0) {
+    const cached = getCached(cacheKey);
+    if (cached !== undefined) return cached;
+  }
 
   const response = await fetch(url, {
     method,
@@ -32,7 +81,12 @@ export async function fetchJson(
     );
   }
 
-  return response.json();
+  const data = await response.json();
+
+  // Store in cache
+  if (ttl > 0) setCache(cacheKey, data, ttl);
+
+  return data;
 }
 
 /**

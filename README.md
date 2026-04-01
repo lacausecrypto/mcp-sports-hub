@@ -6,7 +6,8 @@
 [![Node.js](https://img.shields.io/badge/Node.js-18+-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![Providers](https://img.shields.io/badge/Providers-29-orange)](#providers-29)
 [![Tools](https://img.shields.io/badge/Tools-319-green)](#tool-naming)
-[![Tests](https://img.shields.io/badge/Tests-118_passing-brightgreen)](#architecture)
+[![CI](https://github.com/lacausecrypto/mcp-sports-hub/actions/workflows/ci.yml/badge.svg)](https://github.com/lacausecrypto/mcp-sports-hub/actions)
+[![npm](https://img.shields.io/npm/v/mcp-sports-hub?color=CB3837&logo=npm&logoColor=white)](https://www.npmjs.com/package/mcp-sports-hub)
 [![macOS](https://img.shields.io/badge/macOS-supported-lightgrey?logo=apple&logoColor=white)](#platforms)
 [![Linux](https://img.shields.io/badge/Linux-supported-lightgrey?logo=linux&logoColor=white)](#platforms)
 [![Windows](https://img.shields.io/badge/Windows-supported-lightgrey?logo=windows&logoColor=white)](#platforms)
@@ -110,8 +111,16 @@ Registration takes 1-2 minutes. All keys are free.
 
 ## Installation
 
+### Quick (npx — no install)
+
 ```bash
-git clone https://github.com/sports-mcp/hub.git
+npx mcp-sports-hub
+```
+
+### From source
+
+```bash
+git clone https://github.com/lacausecrypto/mcp-sports-hub.git
 cd mcp-sports-hub
 npm install
 npm run build
@@ -216,31 +225,46 @@ Or in `.claude/settings.json`:
 
 ## Provider Filtering
 
-By default all 29 providers (319 tools) are loaded. Use `SPORTS_HUB_PROVIDERS` to load only what you need:
+By default, only the **free preset** is loaded (9 providers, ~98 tools — no API keys needed). Use `SPORTS_HUB_PROVIDERS` to change what's loaded:
 
 ```bash
+# Default — free providers only (no config needed)
+npx mcp-sports-hub
+
+# Load ALL 29 providers (319 tools)
+SPORTS_HUB_PROVIDERS=all npx mcp-sports-hub
+
 # Use a preset
-SPORTS_HUB_PROVIDERS=us-major node dist/index.js
+SPORTS_HUB_PROVIDERS=us-major npx mcp-sports-hub
 
 # Pick specific providers
-SPORTS_HUB_PROVIDERS=espn,nhl,odds node dist/index.js
+SPORTS_HUB_PROVIDERS=espn,nhl,odds npx mcp-sports-hub
 
-# Exclude providers (prefix with -)
-SPORTS_HUB_PROVIDERS=-sportsdata,-mma node dist/index.js
+# Exclude from all (prefix with -)
+SPORTS_HUB_PROVIDERS=-sportsdata,-mma npx mcp-sports-hub
 ```
 
 ### Presets
 
-| Preset | Providers | Tools |
-|--------|-----------|-------|
-| `free` | espn, nhl, mlb, f1, openf1, openliga, golfcourse, sportsdb, ncaa | ~98 |
-| `us-major` | espn, nhl, mlb, ncaa, cfbd, bdl, msf | ~79 |
-| `soccer` | espn, apifootball, footballdata, sportmonks, openliga, sportsrc | ~69 |
-| `f1` | f1, openf1 | 25 |
-| `esports` | pandascore | 14 |
-| `odds` | odds, oddsio, sgo | 29 |
-| `cricket` | cricket, entitycricket | 22 |
-| `golf` | livegolf, golfcourse | 14 |
+| Preset | Providers | Tools | Needs keys? |
+|--------|-----------|-------|-------------|
+| `free` (default) | espn, nhl, mlb, f1, openf1, openliga, golfcourse, sportsdb, ncaa | ~98 | No |
+| `all` | all 29 providers | 319 | Yes (for key-required providers) |
+| `us-major` | espn, nhl, mlb, ncaa, cfbd, bdl, msf | ~79 | Some |
+| `soccer` | espn, apifootball, footballdata, sportmonks, openliga, sportsrc | ~69 | Some |
+| `f1` | f1, openf1 | 25 | No |
+| `esports` | pandascore | 14 | Yes |
+| `odds` | odds, oddsio, sgo | 29 | Yes |
+| `cricket` | cricket, entitycricket | 22 | Yes |
+| `golf` | livegolf, golfcourse | 14 | Some |
+
+### Cache
+
+All GET responses are cached in memory for 60 seconds by default. This protects against duplicate calls and rate limit waste. Configure with:
+
+```bash
+SPORTS_HUB_CACHE_TTL=120  # seconds (0 to disable)
+```
 
 In Claude Desktop config:
 ```json
