@@ -2,6 +2,7 @@
   "name": "@sports-mcp/hub",
   "version": "1.0.0",
   "description": "Unified MCP server — 29 sports API providers, 319 tools. Scores, stats, odds, esports, and more.",
+  "mcpName": "io.github.lacausecrypto/sports-hub",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
