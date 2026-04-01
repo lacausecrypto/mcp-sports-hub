@@ -1,0 +1,50 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.lacausecrypto/sports-hub",
+  "description": "29 sports API providers, 319 tools. Scores, stats, odds, esports, and more.",
+  "repository": {
+    "url": "https://github.com/lacausecrypto/mcp-sports-hub",
+    "source": "github"
+  },
+  "version": "1.0.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "mcp-sports-hub",
+      "version": "1.0.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "SPORTS_HUB_PROVIDERS",
+          "description": "Comma-separated provider names or preset (free, us-major, soccer, f1, esports, odds, cricket, golf). Omit for all 29 providers.",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "API_SPORTS_KEY",
+          "description": "API-Sports key (free at api-sports.io)",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": true
+        },
+        {
+          "name": "PANDASCORE_TOKEN",
+          "description": "PandaScore esports token (free at pandascore.co)",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": true
+        },
+        {
+          "name": "THE_ODDS_API_KEY",
+          "description": "The Odds API key (free at the-odds-api.com)",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": true
+        }
+      ]
+    }
+  ]
+}
