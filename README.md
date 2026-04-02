@@ -8,6 +8,7 @@
 [![Tools](https://img.shields.io/badge/Tools-319-green)](#tool-naming)
 [![CI](https://github.com/lacausecrypto/mcp-sports-hub/actions/workflows/ci.yml/badge.svg)](https://github.com/lacausecrypto/mcp-sports-hub/actions)
 [![npm](https://img.shields.io/npm/v/mcp-sports-hub?color=CB3837&logo=npm&logoColor=white)](https://www.npmjs.com/package/mcp-sports-hub)
+[![MCP Registry](https://img.shields.io/badge/MCP_Registry-published-8B5CF6?logo=anthropic&logoColor=white)](https://registry.modelcontextprotocol.io)
 [![macOS](https://img.shields.io/badge/macOS-supported-lightgrey?logo=apple&logoColor=white)](#platforms)
 [![Linux](https://img.shields.io/badge/Linux-supported-lightgrey?logo=linux&logoColor=white)](#platforms)
 [![Windows](https://img.shields.io/badge/Windows-supported-lightgrey?logo=windows&logoColor=white)](#platforms)
@@ -117,6 +118,13 @@ Registration takes 1-2 minutes. All keys are free.
 npx mcp-sports-hub
 ```
 
+### npm global
+
+```bash
+npm install -g mcp-sports-hub
+mcp-sports-hub
+```
+
 ### From source
 
 ```bash
@@ -125,6 +133,10 @@ cd mcp-sports-hub
 npm install
 npm run build
 ```
+
+### MCP Registry
+
+This server is published on the [official MCP Registry](https://registry.modelcontextprotocol.io) as `io.github.lacausecrypto/sports-hub`. MCP clients that support the registry can discover and install it automatically.
 
 ## Transport Modes
 
