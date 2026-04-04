@@ -20,9 +20,10 @@ export function register(server: McpServer): void {
 
     const url = buildUrl(`${BASE}${path}`, { apiKey: API_KEY, ...params });
 
-    // We need raw response for usage headers, so use fetch directly
+    // Use raw fetch for usage header tracking, but with timeout
     const response = await fetch(url, {
-      headers: { Accept: "application/json", "User-Agent": "mcp-sports-hub/1.0.0" },
+      headers: { Accept: "application/json", "User-Agent": "mcp-sports-hub/1.1.0" },
+      signal: AbortSignal.timeout(15_000),
     });
 
     // Extract usage from headers

@@ -69,9 +69,10 @@ export async function fetchJson(
     method,
     headers: {
       Accept: "application/json",
-      "User-Agent": "mcp-sports-hub/1.0.0",
+      "User-Agent": "mcp-sports-hub/1.1.0",
       ...headers,
     },
+    signal: AbortSignal.timeout(15_000), // 15s timeout
   });
 
   if (!response.ok) {
