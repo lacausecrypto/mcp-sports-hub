@@ -1,17 +1,25 @@
 # Sports Hub MCP Server
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![MCP SDK](https://img.shields.io/badge/MCP_SDK-1.12-black?logo=anthropic&logoColor=white)](https://modelcontextprotocol.io)
-[![Node.js](https://img.shields.io/badge/Node.js-18+-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
-[![Providers](https://img.shields.io/badge/Providers-29-orange)](#providers-29)
-[![Tools](https://img.shields.io/badge/Tools-319-green)](#tool-naming)
-[![CI](https://github.com/lacausecrypto/mcp-sports-hub/actions/workflows/ci.yml/badge.svg)](https://github.com/lacausecrypto/mcp-sports-hub/actions)
-[![npm](https://img.shields.io/npm/v/mcp-sports-hub?color=CB3837&logo=npm&logoColor=white)](https://www.npmjs.com/package/mcp-sports-hub)
-[![MCP Registry](https://img.shields.io/badge/MCP_Registry-published-8B5CF6?logo=anthropic&logoColor=white)](https://registry.modelcontextprotocol.io)
-[![macOS](https://img.shields.io/badge/macOS-supported-lightgrey?logo=apple&logoColor=white)](#platforms)
-[![Linux](https://img.shields.io/badge/Linux-supported-lightgrey?logo=linux&logoColor=white)](#platforms)
-[![Windows](https://img.shields.io/badge/Windows-supported-lightgrey?logo=windows&logoColor=white)](#platforms)
+<p align="center">
+  <a href="https://www.npmjs.com/package/mcp-sports-hub"><img src="https://img.shields.io/npm/v/mcp-sports-hub?color=CB3837&logo=npm&logoColor=white" alt="npm version"></a>
+  <a href="https://www.npmjs.com/package/mcp-sports-hub"><img src="https://img.shields.io/npm/dt/mcp-sports-hub?color=CB3837&logo=npm&logoColor=white" alt="npm downloads"></a>
+  <a href="https://github.com/lacausecrypto/mcp-sports-hub/actions"><img src="https://github.com/lacausecrypto/mcp-sports-hub/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License"></a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Providers-29-orange" alt="29 Providers">
+  <img src="https://img.shields.io/badge/Tools-319-green" alt="319 Tools">
+  <a href="https://registry.modelcontextprotocol.io"><img src="https://img.shields.io/badge/MCP_Registry-published-8B5CF6?logo=anthropic&logoColor=white" alt="MCP Registry"></a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/macOS-supported-lightgrey?logo=apple&logoColor=white" alt="macOS">
+  <img src="https://img.shields.io/badge/Linux-supported-lightgrey?logo=linux&logoColor=white" alt="Linux">
+  <img src="https://img.shields.io/badge/Windows-supported-lightgrey?logo=windows&logoColor=white" alt="Windows">
+  <img src="https://img.shields.io/badge/Node.js-18+-339933?logo=node.js&logoColor=white" alt="Node.js">
+  <img src="https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white" alt="TypeScript">
+</p>
 
 A unified MCP server that aggregates **29 sports API providers** into a single service. **319 tools** covering scores, stats, odds, esports, college sports, and more across 70+ sports.
 
