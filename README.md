@@ -8,8 +8,8 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Providers-29-orange" alt="29 Providers">
-  <img src="https://img.shields.io/badge/Tools-319-green" alt="319 Tools">
+  <img src="https://img.shields.io/badge/Providers-32-orange" alt="32 Providers">
+  <img src="https://img.shields.io/badge/Tools-336-green" alt="336 Tools">
   <a href="https://registry.modelcontextprotocol.io"><img src="https://img.shields.io/badge/MCP_Registry-published-8B5CF6?logo=anthropic&logoColor=white" alt="MCP Registry"></a>
 </p>
 
@@ -21,7 +21,7 @@
   <img src="https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white" alt="TypeScript">
 </p>
 
-A unified MCP server that aggregates **29 sports API providers** into a single service. **319 tools** covering scores, stats, odds, esports, college sports, and more across 70+ sports.
+A unified MCP server that aggregates **32 sports API providers** into a single service. **336 tools** covering scores, stats, odds, esports, college sports, chess, AFL, and more across 70+ sports.
 
 > Each provider works independently. You only need API keys for the providers you use. Missing keys don't block startup — tools return an error when called without their key.
 
@@ -69,9 +69,9 @@ Uses the **stdio transport** from the [MCP SDK](https://modelcontextprotocol.io)
 
 **Requirements**: Node.js 18+, npm.
 
-## Providers (29)
+## Providers (32)
 
-### Works instantly — no API key, no signup (9 providers, 98 tools)
+### Works instantly — no API key, no signup (12 providers, ~109 tools)
 
 These providers work out of the box. Just build and run.
 
@@ -80,16 +80,19 @@ These providers work out of the box. Just build and run.
 | `espn_` | [ESPN](https://site.api.espn.com/) | 20+ sports | 10 | Unofficial — can break |
 | `nhl_` | [NHL Web API](https://api-web.nhle.com/) | NHL | 13 | Undocumented but stable |
 | `mlb_` | [MLB Stats API](https://statsapi.mlb.com/) | MLB/MiLB | 13 | Official, undocumented |
-| `f1_` | [Jolpica F1](http://api.jolpi.ca/ergast/f1/) | Formula 1 (1950+) | 13 | Community-maintained |
+| `f1_` | [Jolpica F1](https://api.jolpi.ca/ergast/f1/) | Formula 1 (1950+) | 13 | Community-maintained |
 | `openf1_` | [OpenF1](https://openf1.org/) | F1 live telemetry | 12 | Live race weekends only |
 | `openliga_` | [OpenLigaDB](https://api.openligadb.de/) | German football | 10 | Bundesliga focus |
-| `golfcourse_` | [GolfCourseAPI](https://golfcourseapi.com/) | 30K+ courses | 6 | Course data only |
 | `sportsdb_` | [TheSportsDB](https://www.thesportsdb.com/) | 40+ sports | 13 | Test key auto, watermarks |
 | `ncaa_` | [NCAA API](https://github.com/henrygd/ncaa-api) | College sports | 8 | 5 req/s rate limit |
+| `sportsrc_` | [SportSRC](https://sportsrc.org/) | Football, basketball, MMA + streams | 7 | V1 free, V2 needs paid key |
+| `lichess_` | [Lichess](https://lichess.org/api) | Chess (users, top players, broadcasts, daily puzzle) | 7 | ~20 req/sec/IP |
+| `chesscom_` | [Chess.com](https://www.chess.com/news/view/published-data-api) | Chess (profiles, stats, clubs, leaderboards) | 7 | Throttles on parallel calls |
+| `squiggle_` | [Squiggle](https://api.squiggle.com.au/) | AFL (Australian Football League) | 6 | Honest UA required |
 
-> **Tip**: Use `SPORTS_HUB_PROVIDERS=free` to load only these 9 providers.
+> **Tip**: Use `SPORTS_HUB_PROVIDERS=free` to load only these 12 providers (~109 tools).
 
-### Free tier with API key — signup required, no credit card (20 providers, 221 tools)
+### Free tier with API key — signup required, no credit card (21 providers, ~227 tools)
 
 Registration takes 1-2 minutes. All keys are free.
 
@@ -113,7 +116,7 @@ Registration takes 1-2 minutes. All keys are free.
 | `isports_` | iSportsAPI | Football/Basketball (Asia) | 10 | Free tier | [Sign up](https://www.isportsapi.com/) |
 | `sportdevs_` | SportDevs | Rugby/Volleyball/Handball | 12 | Trial | [Sign up](https://sportdevs.com/) |
 | `msf_` | MySportsFeeds | NFL/NBA/MLB/NHL | 12 | Free non-commercial | [Sign up](https://www.mysportsfeeds.com/) |
-| `sportsrc_` | SportSRC | Football/NBA/UFC + xG | 10 | 1000 req/day | [Sign up](https://sportsrc.org/) |
+| `golfcourse_` | GolfCourseAPI | 30K+ golf courses | 6 | 300 req/day | [Sign up](https://golfcourseapi.com/) |
 | `cfbd_` | College Football Data | NCAA football | 14 | 1000 req/mo | [Sign up](https://collegefootballdata.com/key) |
 
 > Providers with missing keys don't block the server — they just return an error when called. Register keys incrementally as you need them.
@@ -178,7 +181,8 @@ Only set keys for providers you want:
 
 ```bash
 # Free — no key needed:
-# ESPN, NHL, MLB, Jolpica F1, OpenF1, OpenLigaDB, GolfCourseAPI
+# ESPN, NHL, MLB, Jolpica F1, OpenF1, OpenLigaDB, NCAA, TheSportsDB (test key),
+# SportSRC (V1), Lichess, Chess.com, Squiggle (AFL)
 
 # Optional (defaults to test key)
 export THESPORTSDB_API_KEY="your-key"          # https://www.thesportsdb.com/
@@ -201,7 +205,7 @@ export FIGHTING_TOMATOES_API_KEY="your-key"     # https://fightingtomatoes.com/
 export LIVE_GOLF_API_KEY="your-key"             # https://livegolfapi.com/
 export ISPORTSAPI_KEY="your-key"                # https://www.isportsapi.com/
 export SPORTDEVS_API_KEY="your-key"             # https://sportdevs.com/
-export SPORTSRC_API_KEY="your-key"              # https://sportsrc.org/
+export GOLFCOURSE_API_KEY="your-key"            # https://golfcourseapi.com/
 export MYSPORTSFEEDS_USER="your-user"           # https://www.mysportsfeeds.com/
 export MYSPORTSFEEDS_PASS="your-pass"
 export CFBD_API_KEY="your-key"                  # https://collegefootballdata.com/key
@@ -292,8 +296,9 @@ SPORTS_HUB_PROVIDERS=-sportsdata,-mma npx mcp-sports-hub
 
 | Preset | Providers | Tools | Needs keys? |
 |--------|-----------|-------|-------------|
-| `free` (default) | espn, nhl, mlb, f1, openf1, openliga, golfcourse, sportsdb, ncaa | ~98 | No |
-| `all` | all 29 providers | 319 | Yes (for key-required providers) |
+| `free` (default) | espn, nhl, mlb, f1, openf1, openliga, sportsdb, ncaa, sportsrc, lichess, chesscom, squiggle | ~109 | No |
+| `all` | all 32 providers | 336 | Yes (for key-required providers) |
+| `chess` | lichess, chesscom | 14 | No |
 | `us-major` | espn, nhl, mlb, ncaa, cfbd, bdl, msf | ~79 | Some |
 | `soccer` | espn, apifootball, footballdata, sportmonks, openliga, sportsrc | ~69 | Some |
 | `f1` | f1, openf1 | 25 | No |
@@ -348,7 +353,7 @@ src/
     ├── jolpica-f1.ts           #  13 tools — no key
     ├── openf1.ts               #  12 tools — no key
     ├── openligadb.ts           #  10 tools — no key
-    ├── golfcourse.ts           #   6 tools — no key
+    ├── golfcourse.ts           #   6 tools — GOLFCOURSE_API_KEY
     ├── thesportsdb.ts          #  13 tools — optional key
     ├── pandascore.ts           #  14 tools — PANDASCORE_TOKEN
     ├── api-football.ts         #  15 tools — API_FOOTBALL_KEY
@@ -368,9 +373,12 @@ src/
     ├── isportsapi.ts           #  10 tools — ISPORTSAPI_KEY
     ├── sportdevs.ts            #  12 tools — SPORTDEVS_API_KEY
     ├── mysportsfeeds.ts        #  12 tools — MYSPORTSFEEDS_USER/PASS
-    ├── sportsrc.ts             #  10 tools — SPORTSRC_API_KEY
+    ├── sportsrc.ts             #   7 tools — V1 free, V2 needs paid key (not exposed)
     ├── ncaa.ts                 #   8 tools — no key
-    └── cfbd.ts                 #  14 tools — CFBD_API_KEY
+    ├── cfbd.ts                 #  14 tools — CFBD_API_KEY
+    ├── lichess.ts              #   7 tools — no key
+    ├── chess-com.ts            #   7 tools — no key
+    └── squiggle.ts             #   6 tools — no key
 ```
 
 Each provider exports `register(server)`. Keys are checked at call time, not startup.

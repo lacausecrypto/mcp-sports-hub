@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { fetchJson, buildUrl, toolResult, errorResult } from "../shared/http.js";
+import { fetchJson, buildUrl, toolResult, errorResult, pathSegment } from "../shared/http.js";
 
 // ---------------------------------------------------------------------------
 // Constants & helpers
@@ -14,7 +14,7 @@ function espnUrl(
   endpoint: string,
   params?: Record<string, string | undefined>,
 ): string {
-  return buildUrl(`${BASE}/${sport}/${league}/${endpoint}`, params);
+  return buildUrl(`${BASE}/${pathSegment(sport)}/${pathSegment(league)}/${endpoint}`, params);
 }
 
 // ---------------------------------------------------------------------------
@@ -138,7 +138,7 @@ export function register(server: McpServer): void {
     },
     async ({ sport, league, team_id }) => {
       try {
-        const url = espnUrl(sport, league, `teams/${team_id}`, {});
+        const url = espnUrl(sport, league, `teams/${pathSegment(team_id)}`, {});
         const data = await fetchJson(url);
         return toolResult(data);
       } catch (err) {
@@ -159,7 +159,7 @@ export function register(server: McpServer): void {
     },
     async ({ sport, league, team_id }) => {
       try {
-        const url = espnUrl(sport, league, `teams/${team_id}/roster`, {});
+        const url = espnUrl(sport, league, `teams/${pathSegment(team_id)}/roster`, {});
         const data = await fetchJson(url);
         return toolResult(data);
       } catch (err) {
@@ -184,7 +184,7 @@ export function register(server: McpServer): void {
     },
     async ({ sport, league, team_id, season }) => {
       try {
-        const url = espnUrl(sport, league, `teams/${team_id}/schedule`, {
+        const url = espnUrl(sport, league, `teams/${pathSegment(team_id)}/schedule`, {
           season,
         });
         const data = await fetchJson(url);
@@ -228,7 +228,7 @@ export function register(server: McpServer): void {
     },
     async ({ sport, league, athlete_id }) => {
       try {
-        const url = espnUrl(sport, league, `athletes/${athlete_id}`, {});
+        const url = espnUrl(sport, league, `athletes/${pathSegment(athlete_id)}`, {});
         const data = await fetchJson(url);
         return toolResult(data);
       } catch (err) {

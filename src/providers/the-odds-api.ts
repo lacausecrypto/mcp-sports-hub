@@ -1,6 +1,11 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { fetchJson, buildUrl, toolResult, errorResult } from "../shared/http.js";
+import {
+  buildUrl,
+  errorResult,
+  fetchJsonWithMeta,
+  pathSegment,
+} from "../shared/http.js";
 
 // ---------------------------------------------------------------------------
 // The Odds API provider — 9 tools
@@ -8,48 +13,48 @@ import { fetchJson, buildUrl, toolResult, errorResult } from "../shared/http.js"
 // Auth: apiKey query param
 // ---------------------------------------------------------------------------
 
+const BASE = "https://api.the-odds-api.com/v4";
+
+interface UsageInfo {
+  requestsRemaining: string;
+  requestsUsed: string;
+}
+
+function readUsage(headers: Headers): UsageInfo {
+  return {
+    requestsRemaining: headers.get("x-requests-remaining") ?? "unknown",
+    requestsUsed: headers.get("x-requests-used") ?? "unknown",
+  };
+}
+
+function formatUsageBlock(usage: UsageInfo): string {
+  const parts: string[] = [];
+  if (usage.requestsUsed !== "unknown") parts.push(`Requests used: ${usage.requestsUsed}`);
+  if (usage.requestsRemaining !== "unknown") parts.push(`Requests remaining: ${usage.requestsRemaining}`);
+  return parts.length > 0 ? `\n\n---\nAPI Usage: ${parts.join(" | ")}` : "";
+}
+
 export function register(server: McpServer): void {
   const API_KEY = process.env.THE_ODDS_API_KEY;
-  const BASE = "https://api.the-odds-api.com/v4";
 
-  // Usage tracking (mirrors original)
-  let lastUsage = { requestsRemaining: "unknown", requestsUsed: "unknown" };
+  // Per-provider usage cache. Updated on every successful call.
+  // Used by `odds_check_usage` to avoid burning a request just to read usage.
+  let lastUsage: UsageInfo = { requestsRemaining: "unknown", requestsUsed: "unknown" };
 
   async function apiRequest(path: string, params: Record<string, string | undefined> = {}) {
     if (!API_KEY) throw new Error("THE_ODDS_API_KEY env var is required. Get a free key at https://the-odds-api.com/");
-
     const url = buildUrl(`${BASE}${path}`, { apiKey: API_KEY, ...params });
-
-    // Use raw fetch for usage header tracking, but with timeout
-    const response = await fetch(url, {
-      headers: { Accept: "application/json", "User-Agent": "mcp-sports-hub/1.1.0" },
-      signal: AbortSignal.timeout(15_000),
-    });
-
-    // Extract usage from headers
-    lastUsage = {
-      requestsRemaining: response.headers.get("x-requests-remaining") ?? "unknown",
-      requestsUsed: response.headers.get("x-requests-used") ?? "unknown",
-    };
-
-    if (!response.ok) {
-      const body = await response.text().catch(() => "");
-      throw new Error(`API error ${response.status}: ${body}`);
-    }
-
-    return response.json();
+    const { data, headers } = await fetchJsonWithMeta(url);
+    const usage = readUsage(headers);
+    lastUsage = usage;
+    return { data, usage };
   }
 
-  function formatUsage(): string {
-    const parts: string[] = [];
-    if (lastUsage.requestsUsed !== "unknown") parts.push(`Requests used: ${lastUsage.requestsUsed}`);
-    if (lastUsage.requestsRemaining !== "unknown") parts.push(`Requests remaining: ${lastUsage.requestsRemaining}`);
-    return parts.length > 0 ? `\n\n---\nAPI Usage: ${parts.join(" | ")}` : "";
-  }
-
-  function oddsResult(data: unknown) {
+  function oddsResult(data: unknown, usage: UsageInfo) {
     return {
-      content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) + formatUsage() }],
+      content: [
+        { type: "text" as const, text: JSON.stringify(data, null, 2) + formatUsageBlock(usage) },
+      ],
     };
   }
 
@@ -60,8 +65,8 @@ export function register(server: McpServer): void {
     {},
     async () => {
       try {
-        const data = await apiRequest("/sports");
-        return oddsResult(data);
+        const { data, usage } = await apiRequest("/sports");
+        return oddsResult(data, usage);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
       }
@@ -81,10 +86,10 @@ export function register(server: McpServer): void {
     },
     async ({ sport_key, regions, markets, oddsFormat, bookmakers }) => {
       try {
-        const data = await apiRequest(`/sports/${encodeURIComponent(sport_key)}/odds`, {
+        const { data, usage } = await apiRequest(`/sports/${pathSegment(sport_key)}/odds`, {
           regions, markets, oddsFormat, bookmakers,
         });
-        return oddsResult(data);
+        return oddsResult(data, usage);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
       }
@@ -104,11 +109,11 @@ export function register(server: McpServer): void {
     },
     async ({ sport_key, event_id, regions, markets, oddsFormat }) => {
       try {
-        const data = await apiRequest(
-          `/sports/${encodeURIComponent(sport_key)}/events/${encodeURIComponent(event_id)}/odds`,
+        const { data, usage } = await apiRequest(
+          `/sports/${pathSegment(sport_key)}/events/${pathSegment(event_id)}/odds`,
           { regions, markets, oddsFormat },
         );
-        return oddsResult(data);
+        return oddsResult(data, usage);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
       }
@@ -125,10 +130,10 @@ export function register(server: McpServer): void {
     },
     async ({ sport_key, daysFrom }) => {
       try {
-        const data = await apiRequest(`/sports/${encodeURIComponent(sport_key)}/scores`, {
+        const { data, usage } = await apiRequest(`/sports/${pathSegment(sport_key)}/scores`, {
           daysFrom: daysFrom?.toString(),
         });
-        return oddsResult(data);
+        return oddsResult(data, usage);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
       }
@@ -145,10 +150,10 @@ export function register(server: McpServer): void {
     },
     async ({ sport_key, dateFormat }) => {
       try {
-        const data = await apiRequest(`/sports/${encodeURIComponent(sport_key)}/events`, {
+        const { data, usage } = await apiRequest(`/sports/${pathSegment(sport_key)}/events`, {
           dateFormat,
         });
-        return oddsResult(data);
+        return oddsResult(data, usage);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
       }
@@ -168,10 +173,10 @@ export function register(server: McpServer): void {
     },
     async ({ sport_key, regions, date, markets, oddsFormat }) => {
       try {
-        const data = await apiRequest(`/historical/sports/${encodeURIComponent(sport_key)}/odds`, {
+        const { data, usage } = await apiRequest(`/historical/sports/${pathSegment(sport_key)}/odds`, {
           regions, date, markets, oddsFormat,
         });
-        return oddsResult(data);
+        return oddsResult(data, usage);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
       }
@@ -188,10 +193,10 @@ export function register(server: McpServer): void {
     },
     async ({ sport_key, date }) => {
       try {
-        const data = await apiRequest(`/historical/sports/${encodeURIComponent(sport_key)}/events`, {
+        const { data, usage } = await apiRequest(`/historical/sports/${pathSegment(sport_key)}/events`, {
           date,
         });
-        return oddsResult(data);
+        return oddsResult(data, usage);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
       }
@@ -211,25 +216,27 @@ export function register(server: McpServer): void {
     },
     async ({ sport_key, event_id, regions, markets, oddsFormat }) => {
       try {
-        const data = await apiRequest(
-          `/sports/${encodeURIComponent(sport_key)}/events/${encodeURIComponent(event_id)}/odds`,
+        const { data, usage } = await apiRequest(
+          `/sports/${pathSegment(sport_key)}/events/${pathSegment(event_id)}/odds`,
           { regions, markets, oddsFormat },
         );
-        return oddsResult(data);
+        return oddsResult(data, usage);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
       }
     },
   );
 
-  // 9. odds_check_usage
+  // 9. odds_check_usage — reads from cached lastUsage if available, else makes one call
   server.tool(
     "odds_check_usage",
-    "Check your API usage (requests used and remaining). Makes a lightweight call to the sports endpoint to read usage headers.",
+    "Check your API usage (requests used and remaining). Returns the latest usage values seen on a previous call; only makes a new call if no usage has been observed yet.",
     {},
     async () => {
       try {
-        await apiRequest("/sports");
+        if (lastUsage.requestsUsed === "unknown" && lastUsage.requestsRemaining === "unknown") {
+          await apiRequest("/sports");
+        }
         const text =
           `API Usage Report\n` +
           `================\n` +

@@ -1,14 +1,14 @@
 # Sports Hub MCP Server
 
-Unified MCP server — 29 providers, 319 tools, one process.
-Covers: NFL, NBA, MLB, NHL, Soccer, F1, Tennis, Cricket, MMA, Golf, Esports, Rugby, Volleyball, Handball, College Sports, and more.
+Unified MCP server — 32 providers, 336 tools, one process.
+Covers: NFL, NBA, MLB, NHL, Soccer, F1, Tennis, Cricket, MMA, Golf, Esports, Rugby, Volleyball, Handball, College Sports, Chess, AFL, and more.
 
 Works with any MCP client (Claude, ChatGPT, Gemini, Cursor, Windsurf, Continue, Cline, Zed).
 Uses stdio transport — compatible with any LLM supporting the Model Context Protocol.
 
 ## Provider Reference
 
-### No API key required (9 providers, 98 tools)
+### No API key required (12 providers, ~109 tools)
 
 | Prefix | Provider | Coverage | Tools |
 |--------|----------|----------|-------|
@@ -18,13 +18,17 @@ Uses stdio transport — compatible with any LLM supporting the Model Context Pr
 | `f1_` | Jolpica F1 | F1 results, standings, circuits (1950-now) | 13 |
 | `openf1_` | OpenF1 | F1 live telemetry, lap times, race control | 12 |
 | `openliga_` | OpenLigaDB | German football (Bundesliga focus) | 10 |
-| `golfcourse_` | GolfCourseAPI | 30K+ golf courses worldwide | 6 |
 | `sportsdb_` | TheSportsDB | 40+ sports, teams, players, events | 13 |
 | `ncaa_` | NCAA API | College sports (football, basketball, etc.) | 8 |
+| `sportsrc_` | SportSRC | Football/Basketball/MMA + streams | 7 |
+| `lichess_` | Lichess | Chess (users, top players, broadcasts, tournaments, daily puzzle) | 7 |
+| `chesscom_` | Chess.com | Chess (profiles, stats, clubs, archives, leaderboards) | 7 |
+| `squiggle_` | Squiggle | AFL (Australian Football League): teams, games, ladder, tips, sources | 6 |
 
 `sportsdb_` defaults to test key "3" (free, watermarked images). Set `THESPORTSDB_API_KEY` for a personal key.
+`sportsrc_` V1 endpoints are free with no key. V2 (xG, momentum, lineups) needs `SPORTSRC_API_KEY` and is currently NOT exposed.
 
-### API key required (20 providers, 221 tools)
+### API key required (21 providers, ~227 tools)
 
 | Prefix | Provider | Env var | Coverage | Tools | Free limit |
 |--------|----------|---------|----------|-------|------------|
@@ -46,23 +50,25 @@ Uses stdio transport — compatible with any LLM supporting the Model Context Pr
 | `sportdevs_` | SportDevs | `SPORTDEVS_API_KEY` | Rugby, Volleyball, Handball | 12 | Trial |
 | `msf_` | MySportsFeeds | `MYSPORTSFEEDS_USER` + `_PASS` | NFL, NBA, MLB, NHL (detailed) | 12 | Free non-commercial |
 | `pandascore_` | PandaScore | `PANDASCORE_TOKEN` | Esports 13 titles (LoL, CS2, Dota2...) | 14 | 1000/hr |
-| `sportsrc_` | SportSRC | `SPORTSRC_API_KEY` | Football, NBA, UFC + xG, odds | 10 | 1000/day |
+| `golfcourse_` | GolfCourseAPI | `GOLFCOURSE_API_KEY` | 30K+ golf courses worldwide | 6 | 300/day |
 | `cfbd_` | College Football Data | `CFBD_API_KEY` | NCAA football (games, stats, recruiting) | 14 | 1000/mo |
 
 ## Choosing the right tool
 
-**Live scores**: `espn_get_scoreboard` (multi-sport), `nhl_get_scores`, `openliga_get_current_matchday`, `sportsrc_get_live_scores`
+**Live scores**: `espn_get_scoreboard` (multi-sport), `nhl_get_scores`, `openliga_get_current_matchday`, `sportsrc_get_live`
 **Standings**: `espn_get_standings`, `nhl_get_standings`, `mlb_get_standings`, `apifootball_get_standings`, `footballdata_get_standings`
 **Player stats**: `mlb_get_player_stats`, `nhl_get_player`, `bdl_get_stats`, `apisports_get_players`
 **Game details**: `mlb_get_game_boxscore`, `nhl_get_game_boxscore`, `espn_get_event_summary`
 **Soccer fixtures**: `apifootball_get_fixtures` (960+ leagues), `footballdata_get_matches` (12 top leagues), `sportsrc_get_matches`
 **F1 data**: `f1_get_race_results` (historical 1950+), `openf1_get_laps` (live telemetry)
-**Betting odds**: `odds_get_odds`, `oddsio_get_odds`, `sgo_get_odds`, `sportsrc_get_odds` (xG)
+**Betting odds**: `odds_get_odds`, `oddsio_get_odds`, `sgo_get_odds`
 **Esports**: `pandascore_get_matches`, `pandascore_get_lives` (LoL, CS2, Dota2, Valorant, etc.)
 **Cricket**: `cricket_get_current_matches`, `entitycricket_get_matches`
 **Golf**: `livegolf_get_leaderboard`, `golfcourse_search_courses`
 **MMA**: `mma_search_fighters`, `mma_get_fighter_fights`
 **College sports**: `ncaa_get_scoreboard`, `ncaa_get_rankings`, `cfbd_get_games`, `cfbd_get_plays`
+**Chess**: `lichess_get_top_players`, `lichess_get_user`, `lichess_get_daily_puzzle`, `chesscom_get_player_stats`, `chesscom_get_leaderboards`
+**AFL (Australian football)**: `squiggle_get_games`, `squiggle_get_ladder`, `squiggle_get_tips`
 **Niche sports**: `sportdevs_get_matches` (rugby, volleyball, handball)
 **Team/player search**: `sportsdb_search_teams`, `sportsdb_search_players`, `mlb_search_players`
 
@@ -90,7 +96,7 @@ Providers without published limits (ESPN, NHL, MLB, F1, OpenF1, OpenLigaDB, Golf
 
 ## Provider Filtering
 
-By default, ALL 29 providers (319 tools) are loaded. This can overwhelm LLMs.
+By default, ALL 32 providers (336 tools) are loaded. This can overwhelm LLMs.
 Use `SPORTS_HUB_PROVIDERS` to control which providers are active.
 
 ### Presets (recommended)
@@ -104,12 +110,13 @@ Use `SPORTS_HUB_PROVIDERS` to control which providers are active.
 | `odds` | odds, oddsio, sgo | Betting odds |
 | `cricket` | cricket, entitycricket | Cricket |
 | `golf` | livegolf, golfcourse | Golf |
-| `free` | espn, nhl, mlb, f1, openf1, openliga, golfcourse, sportsdb, ncaa | All free providers |
+| `chess` | lichess, chesscom | Chess (Lichess + Chess.com) |
+| `free` | espn, nhl, mlb, f1, openf1, openliga, sportsdb, ncaa, sportsrc, lichess, chesscom, squiggle | All no-key providers (12) |
 
 ### Usage
 
 ```bash
-# All 319 tools (default)
+# All 336 tools (default)
 node dist/index.js
 
 # Preset — recommended for most users

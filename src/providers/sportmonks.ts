@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { fetchJson, buildUrl, toolResult, errorResult } from "../shared/http.js";
+import { fetchJson, buildUrl, toolResult, errorResult, pathSegment } from "../shared/http.js";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -66,7 +66,7 @@ export function register(server: McpServer): void {
       const params: Record<string, string | number | undefined> = { include, page };
 
       if (date) {
-        path = `/football/fixtures/date/${date}`;
+        path = `/football/fixtures/date/${pathSegment(date)}`;
       }
 
       if (league_id) params["filters[league_id]"] = league_id;

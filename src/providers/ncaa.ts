@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { fetchJson, toolResult, errorResult } from "../shared/http.js";
+import { fetchJson, toolResult, errorResult, pathSegment } from "../shared/http.js";
 
 // ---------------------------------------------------------------------------
 // NCAA API provider — 8 tools
@@ -10,9 +10,12 @@ import { fetchJson, toolResult, errorResult } from "../shared/http.js";
 
 const BASE = "https://ncaa-api.henrygd.me";
 
-/** Build a path from non-empty segments. */
+/** Build a path from non-empty segments, URL-encoding each. */
 function pathJoin(...segments: (string | undefined)[]): string {
-  return segments.filter((s) => s !== undefined && s !== "").join("/");
+  return segments
+    .filter((s): s is string => s !== undefined && s !== "")
+    .map(pathSegment)
+    .join("/");
 }
 
 export function register(server: McpServer): void {
@@ -46,7 +49,7 @@ export function register(server: McpServer): void {
     },
     async ({ sport, game_id }) => {
       try {
-        const data = await fetchJson(`${BASE}/game/${sport}/${game_id}`);
+        const data = await fetchJson(`${BASE}/game/${pathSegment(sport)}/${pathSegment(game_id)}`);
         return toolResult(data);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
@@ -107,8 +110,8 @@ export function register(server: McpServer): void {
     },
     async ({ sport, division, conference_id }) => {
       try {
-        let url = `${BASE}/teams/${sport}/${division}`;
-        if (conference_id) url += `?conference=${conference_id}`;
+        let url = `${BASE}/teams/${pathSegment(sport)}/${pathSegment(division)}`;
+        if (conference_id) url += `?conference=${encodeURIComponent(conference_id)}`;
         const data = await fetchJson(url);
         return toolResult(data);
       } catch (err) {

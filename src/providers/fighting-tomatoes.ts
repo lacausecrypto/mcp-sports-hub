@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { fetchJson, buildUrl, toolResult, errorResult } from "../shared/http.js";
+import { fetchJson, buildUrl, toolResult, pathSegment, safe } from "../shared/http.js";
 
 // ---------------------------------------------------------------------------
 // Fighting Tomatoes (MMA) provider — 8 tools
@@ -23,14 +23,10 @@ export function register(server: McpServer): void {
     "mma_search_fighters",
     "Search MMA fighters by name. Returns a list of matching fighters with basic info.",
     { name: z.string().describe("Fighter name or partial name to search for") },
-    async ({ name }) => {
-      try {
-        const data = await apiRequest("fighters/search", { name });
-        return toolResult(data);
-      } catch (err) {
-        return errorResult(err instanceof Error ? err.message : String(err));
-      }
-    },
+    safe(async ({ name }: { name: string }) => {
+      const data = await apiRequest("fighters/search", { name });
+      return toolResult(data);
+    }),
   );
 
   // 2. mma_get_fighter
@@ -38,14 +34,10 @@ export function register(server: McpServer): void {
     "mma_get_fighter",
     "Get detailed information about a specific MMA fighter including record, stats, and bio.",
     { fighter_id: z.string().describe("Unique fighter identifier") },
-    async ({ fighter_id }) => {
-      try {
-        const data = await apiRequest(`fighters/${fighter_id}`);
-        return toolResult(data);
-      } catch (err) {
-        return errorResult(err instanceof Error ? err.message : String(err));
-      }
-    },
+    safe(async ({ fighter_id }: { fighter_id: string }) => {
+      const data = await apiRequest(`fighters/${pathSegment(fighter_id)}`);
+      return toolResult(data);
+    }),
   );
 
   // 3. mma_get_fighter_fights
@@ -53,14 +45,10 @@ export function register(server: McpServer): void {
     "mma_get_fighter_fights",
     "Get the complete fight history for a specific MMA fighter.",
     { fighter_id: z.string().describe("Unique fighter identifier") },
-    async ({ fighter_id }) => {
-      try {
-        const data = await apiRequest(`fighters/${fighter_id}/fights`);
-        return toolResult(data);
-      } catch (err) {
-        return errorResult(err instanceof Error ? err.message : String(err));
-      }
-    },
+    safe(async ({ fighter_id }: { fighter_id: string }) => {
+      const data = await apiRequest(`fighters/${pathSegment(fighter_id)}/fights`);
+      return toolResult(data);
+    }),
   );
 
   // 4. mma_get_events
@@ -72,14 +60,10 @@ export function register(server: McpServer): void {
       date: z.string().optional().describe("Filter by date (YYYY-MM-DD format)"),
       page: z.number().int().positive().optional().describe("Page number for pagination (default: 1)"),
     },
-    async ({ organization, date, page }) => {
-      try {
-        const data = await apiRequest("events", { organization, date, page });
-        return toolResult(data);
-      } catch (err) {
-        return errorResult(err instanceof Error ? err.message : String(err));
-      }
-    },
+    safe(async ({ organization, date, page }: { organization?: string; date?: string; page?: number }) => {
+      const data = await apiRequest("events", { organization, date, page });
+      return toolResult(data);
+    }),
   );
 
   // 5. mma_get_event
@@ -87,14 +71,10 @@ export function register(server: McpServer): void {
     "mma_get_event",
     "Get detailed information about a specific MMA event including its fight card.",
     { event_id: z.string().describe("Unique event identifier") },
-    async ({ event_id }) => {
-      try {
-        const data = await apiRequest(`events/${event_id}`);
-        return toolResult(data);
-      } catch (err) {
-        return errorResult(err instanceof Error ? err.message : String(err));
-      }
-    },
+    safe(async ({ event_id }: { event_id: string }) => {
+      const data = await apiRequest(`events/${pathSegment(event_id)}`);
+      return toolResult(data);
+    }),
   );
 
   // 6. mma_get_fight
@@ -102,14 +82,10 @@ export function register(server: McpServer): void {
     "mma_get_fight",
     "Get detailed information about a specific MMA fight including result, method, round, and time.",
     { fight_id: z.string().describe("Unique fight identifier") },
-    async ({ fight_id }) => {
-      try {
-        const data = await apiRequest(`fights/${fight_id}`);
-        return toolResult(data);
-      } catch (err) {
-        return errorResult(err instanceof Error ? err.message : String(err));
-      }
-    },
+    safe(async ({ fight_id }: { fight_id: string }) => {
+      const data = await apiRequest(`fights/${pathSegment(fight_id)}`);
+      return toolResult(data);
+    }),
   );
 
   // 7. mma_get_organizations
@@ -117,14 +93,10 @@ export function register(server: McpServer): void {
     "mma_get_organizations",
     "List all MMA organizations available in the database (UFC, Bellator, ONE, PFL, etc.).",
     {},
-    async () => {
-      try {
-        const data = await apiRequest("organizations");
-        return toolResult(data);
-      } catch (err) {
-        return errorResult(err instanceof Error ? err.message : String(err));
-      }
-    },
+    safe(async () => {
+      const data = await apiRequest("organizations");
+      return toolResult(data);
+    }),
   );
 
   // 8. mma_get_upcoming_events
@@ -134,13 +106,9 @@ export function register(server: McpServer): void {
     {
       organization: z.string().optional().describe("Filter by organization (e.g. UFC, Bellator, ONE, PFL)"),
     },
-    async ({ organization }) => {
-      try {
-        const data = await apiRequest("events/upcoming", { organization });
-        return toolResult(data);
-      } catch (err) {
-        return errorResult(err instanceof Error ? err.message : String(err));
-      }
-    },
+    safe(async ({ organization }: { organization?: string }) => {
+      const data = await apiRequest("events/upcoming", { organization });
+      return toolResult(data);
+    }),
   );
 }

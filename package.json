@@ -1,7 +1,7 @@
 {
   "name": "mcp-sports-hub",
-  "version": "1.1.0",
-  "description": "Unified MCP server — 29 sports API providers, 319 tools. Scores, stats, odds, esports, and more.",
+  "version": "1.2.0",
+  "description": "Unified MCP server — 32 sports API providers, 336 tools. Scores, stats, odds, esports, chess, AFL, and more.",
   "mcpName": "io.github.lacausecrypto/sports-hub",
   "type": "module",
   "main": "dist/index.js",
@@ -18,7 +18,9 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "tsc --watch",
+    "typecheck": "tsc --noEmit",
     "prepublishOnly": "npm run build",
+    "pretest": "npm run build",
     "test": "node --test src/tests/smoke.test.mjs"
   },
   "keywords": [
@@ -39,7 +41,11 @@
     "odds",
     "golf",
     "college-football",
-    "ncaa"
+    "ncaa",
+    "chess",
+    "lichess",
+    "afl",
+    "squiggle"
   ],
   "license": "MIT",
   "engines": {
@@ -47,10 +53,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/sports-mcp/hub.git"
+    "url": "git+https://github.com/lacausecrypto/mcp-sports-hub.git"
+  },
+  "homepage": "https://github.com/lacausecrypto/mcp-sports-hub#readme",
+  "bugs": {
+    "url": "https://github.com/lacausecrypto/mcp-sports-hub/issues"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.12.1",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {

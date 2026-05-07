@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { fetchJson, toolResult, errorResult } from "../shared/http.js";
+import { fetchJson, toolResult, errorResult, pathSegment } from "../shared/http.js";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -244,7 +244,7 @@ export function register(server: McpServer): void {
     },
     async ({ league_shortcut }) => {
       try {
-        const data = await fetchJson(`${BASE}/getmatchdata/${league_shortcut}`);
+        const data = await fetchJson(`${BASE}/getmatchdata/${pathSegment(league_shortcut)}`);
         return textResult(formatMatches(data));
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
@@ -279,7 +279,7 @@ export function register(server: McpServer): void {
     },
     async ({ league_shortcut, season }) => {
       try {
-        const data = await fetchJson(`${BASE}/getbltable/${league_shortcut}/${season}`);
+        const data = await fetchJson(`${BASE}/getbltable/${pathSegment(league_shortcut)}/${pathSegment(season)}`);
         return textResult(formatTable(data));
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
@@ -297,7 +297,7 @@ export function register(server: McpServer): void {
     },
     async ({ league_shortcut, season }) => {
       try {
-        const data = await fetchJson(`${BASE}/getgoalgetters/${league_shortcut}/${season}`);
+        const data = await fetchJson(`${BASE}/getgoalgetters/${pathSegment(league_shortcut)}/${pathSegment(season)}`);
         return textResult(formatScorers(data));
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
@@ -315,7 +315,7 @@ export function register(server: McpServer): void {
     },
     async ({ league_shortcut, season }) => {
       try {
-        const data = await fetchJson(`${BASE}/getavailableteams/${league_shortcut}/${season}`);
+        const data = await fetchJson(`${BASE}/getavailableteams/${pathSegment(league_shortcut)}/${pathSegment(season)}`);
         return textResult(formatTeams(data));
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));

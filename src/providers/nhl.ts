@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { fetchJson, buildUrl, toolResult, errorResult } from "../shared/http.js";
+import { fetchJson, buildUrl, toolResult, errorResult, pathSegment } from "../shared/http.js";
 
 // ---------------------------------------------------------------------------
 // Constants & helpers
@@ -174,7 +174,7 @@ export function register(server: McpServer): void {
     async ({ team_abbrev, season }) => {
       try {
         const s = season ?? currentSeasonTag();
-        const data = await fetchJson(`${BASE}/roster/${team_abbrev.toUpperCase()}/${s}`);
+        const data = await fetchJson(`${BASE}/roster/${pathSegment(team_abbrev.toUpperCase())}/${pathSegment(s)}`);
         return toolResult(data);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
@@ -202,7 +202,7 @@ export function register(server: McpServer): void {
       try {
         const m = month ?? currentMonth();
         const data = await fetchJson(
-          `${BASE}/club-schedule/${team_abbrev.toUpperCase()}/month/${m}`,
+          `${BASE}/club-schedule/${pathSegment(team_abbrev.toUpperCase())}/month/${pathSegment(m)}`,
         );
         return toolResult(data);
       } catch (err) {
@@ -225,7 +225,7 @@ export function register(server: McpServer): void {
     async ({ team_abbrev }) => {
       try {
         const data = await fetchJson(
-          `${BASE}/club-stats/${team_abbrev.toUpperCase()}/now`,
+          `${BASE}/club-stats/${pathSegment(team_abbrev.toUpperCase())}/now`,
         );
         return toolResult(data);
       } catch (err) {
@@ -280,7 +280,7 @@ export function register(server: McpServer): void {
       try {
         const s = season ?? currentSeasonTag();
         const gt = game_type ?? 2;
-        const data = await fetchJson(`${BASE}/player/${player_id}/game-log/${s}/${gt}`);
+        const data = await fetchJson(`${BASE}/player/${player_id}/game-log/${pathSegment(s)}/${gt}`);
         return toolResult(data);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));

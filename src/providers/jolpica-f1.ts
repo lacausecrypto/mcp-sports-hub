@@ -1,15 +1,15 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { fetchJson, buildUrl, toolResult, errorResult } from "../shared/http.js";
+import { fetchJson, buildUrl, toolResult, errorResult, pathSegment } from "../shared/http.js";
 
 // ---------------------------------------------------------------------------
 // Constants & helpers
 // ---------------------------------------------------------------------------
 
-const BASE = "http://api.jolpi.ca/ergast";
+const BASE = "https://api.jolpi.ca/ergast";
 
 function seasonPath(season?: string): string {
-  return season ?? "current";
+  return season ? pathSegment(season) : "current";
 }
 
 function f1Url(path: string, params?: Record<string, string | number | undefined>): string {
@@ -40,7 +40,7 @@ export function register(server: McpServer): void {
       try {
         const s = seasonPath(season);
         const path = round
-          ? `/f1/${s}/${round}/results.json`
+          ? `/f1/${s}/${pathSegment(round)}/results.json`
           : `/f1/${s}/results.json`;
         const url = f1Url(path, { limit, offset });
         const data = await fetchJson(url);
@@ -64,7 +64,7 @@ export function register(server: McpServer): void {
       try {
         const s = seasonPath(season);
         const path = round
-          ? `/f1/${s}/${round}/qualifying.json`
+          ? `/f1/${s}/${pathSegment(round)}/qualifying.json`
           : `/f1/${s}/qualifying.json`;
         const url = f1Url(path, { limit, offset });
         const data = await fetchJson(url);
@@ -88,7 +88,7 @@ export function register(server: McpServer): void {
       try {
         const s = seasonPath(season);
         const path = round
-          ? `/f1/${s}/${round}/sprint.json`
+          ? `/f1/${s}/${pathSegment(round)}/sprint.json`
           : `/f1/${s}/sprint.json`;
         const url = f1Url(path, { limit, offset });
         const data = await fetchJson(url);
@@ -232,8 +232,8 @@ export function register(server: McpServer): void {
     async ({ season, round, lap, limit, offset }) => {
       try {
         const path = lap
-          ? `/f1/${season}/${round}/laps/${lap}.json`
-          : `/f1/${season}/${round}/laps.json`;
+          ? `/f1/${season}/${pathSegment(round)}/laps/${lap}.json`
+          : `/f1/${season}/${pathSegment(round)}/laps.json`;
         const url = f1Url(path, { limit, offset });
         const data = await fetchJson(url);
         return toolResult(data);
@@ -256,8 +256,8 @@ export function register(server: McpServer): void {
     async ({ season, round, stop, limit, offset }) => {
       try {
         const path = stop
-          ? `/f1/${season}/${round}/pitstops/${stop}.json`
-          : `/f1/${season}/${round}/pitstops.json`;
+          ? `/f1/${season}/${pathSegment(round)}/pitstops/${stop}.json`
+          : `/f1/${season}/${pathSegment(round)}/pitstops.json`;
         const url = f1Url(path, { limit, offset });
         const data = await fetchJson(url);
         return toolResult(data);
@@ -297,7 +297,7 @@ export function register(server: McpServer): void {
     async ({ driver_id, season, limit, offset }) => {
       try {
         const s = seasonPath(season);
-        const url = f1Url(`/f1/${s}/drivers/${driver_id}/results.json`, { limit, offset });
+        const url = f1Url(`/f1/${s}/drivers/${pathSegment(driver_id)}/results.json`, { limit, offset });
         const data = await fetchJson(url);
         return toolResult(data);
       } catch (err) {

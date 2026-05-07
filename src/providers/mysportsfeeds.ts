@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { fetchJson, buildUrl, toolResult, errorResult } from "../shared/http.js";
+import { fetchJson, buildUrl, toolResult, errorResult, pathSegment } from "../shared/http.js";
 
 // ---------------------------------------------------------------------------
 // MySportsFeeds provider — 12 tools
@@ -35,7 +35,7 @@ export function register(server: McpServer): void {
     },
     async ({ sport, season, date }) => {
       try {
-        const url = buildUrl(`${BASE}/${sport}/${season}/games.json`, { date });
+        const url = buildUrl(`${BASE}/${pathSegment(sport)}/${pathSegment(season)}/games.json`, { date });
         const data = await fetchJson(url, { headers: headers() });
         return toolResult(data);
       } catch (err) {
@@ -55,7 +55,7 @@ export function register(server: McpServer): void {
     },
     async ({ sport, season, game_id }) => {
       try {
-        const url = `${BASE}/${sport}/${season}/games/${encodeURIComponent(game_id)}/boxscore.json`;
+        const url = `${BASE}/${pathSegment(sport)}/${pathSegment(season)}/games/${encodeURIComponent(game_id)}/boxscore.json`;
         const data = await fetchJson(url, { headers: headers() });
         return toolResult(data);
       } catch (err) {
@@ -75,7 +75,7 @@ export function register(server: McpServer): void {
     },
     async ({ sport, season, game_id }) => {
       try {
-        const url = `${BASE}/${sport}/${season}/games/${encodeURIComponent(game_id)}/playbyplay.json`;
+        const url = `${BASE}/${pathSegment(sport)}/${pathSegment(season)}/games/${encodeURIComponent(game_id)}/playbyplay.json`;
         const data = await fetchJson(url, { headers: headers() });
         return toolResult(data);
       } catch (err) {
@@ -94,7 +94,7 @@ export function register(server: McpServer): void {
     },
     async ({ sport, season }) => {
       try {
-        const url = `${BASE}/${sport}/${season}/standings.json`;
+        const url = `${BASE}/${pathSegment(sport)}/${pathSegment(season)}/standings.json`;
         const data = await fetchJson(url, { headers: headers() });
         return toolResult(data);
       } catch (err) {
@@ -114,7 +114,7 @@ export function register(server: McpServer): void {
     },
     async ({ sport, season, player }) => {
       try {
-        const url = buildUrl(`${BASE}/${sport}/${season}/player_stats_totals.json`, { player });
+        const url = buildUrl(`${BASE}/${pathSegment(sport)}/${pathSegment(season)}/player_stats_totals.json`, { player });
         const data = await fetchJson(url, { headers: headers() });
         return toolResult(data);
       } catch (err) {
@@ -134,7 +134,7 @@ export function register(server: McpServer): void {
     },
     async ({ sport, season, team }) => {
       try {
-        const url = buildUrl(`${BASE}/${sport}/${season}/roster_players.json`, { team });
+        const url = buildUrl(`${BASE}/${pathSegment(sport)}/${pathSegment(season)}/roster_players.json`, { team });
         const data = await fetchJson(url, { headers: headers() });
         return toolResult(data);
       } catch (err) {
@@ -153,7 +153,7 @@ export function register(server: McpServer): void {
     },
     async ({ sport, season }) => {
       try {
-        const url = `${BASE}/${sport}/${season}/injuries.json`;
+        const url = `${BASE}/${pathSegment(sport)}/${pathSegment(season)}/injuries.json`;
         const data = await fetchJson(url, { headers: headers() });
         return toolResult(data);
       } catch (err) {
@@ -173,7 +173,7 @@ export function register(server: McpServer): void {
     },
     async ({ sport, season, date }) => {
       try {
-        const url = `${BASE}/${sport}/${season}/date/${date}/dfs.json`;
+        const url = `${BASE}/${pathSegment(sport)}/${pathSegment(season)}/date/${pathSegment(date)}/dfs.json`;
         const data = await fetchJson(url, { headers: headers() });
         return toolResult(data);
       } catch (err) {
@@ -193,7 +193,7 @@ export function register(server: McpServer): void {
     },
     async ({ sport, season, date }) => {
       try {
-        const url = buildUrl(`${BASE}/${sport}/${season}/odds_gamelines.json`, { date });
+        const url = buildUrl(`${BASE}/${pathSegment(sport)}/${pathSegment(season)}/odds_gamelines.json`, { date });
         const data = await fetchJson(url, { headers: headers() });
         return toolResult(data);
       } catch (err) {
@@ -213,7 +213,7 @@ export function register(server: McpServer): void {
     },
     async ({ sport, season, date }) => {
       try {
-        const url = buildUrl(`${BASE}/${sport}/${season}/daily_lineups.json`, { date });
+        const url = buildUrl(`${BASE}/${pathSegment(sport)}/${pathSegment(season)}/daily_lineups.json`, { date });
         const data = await fetchJson(url, { headers: headers() });
         return toolResult(data);
       } catch (err) {
@@ -232,7 +232,7 @@ export function register(server: McpServer): void {
     },
     async ({ sport, season }) => {
       try {
-        const url = `${BASE}/${sport}/${season}/games.json`;
+        const url = `${BASE}/${pathSegment(sport)}/${pathSegment(season)}/games.json`;
         const data = await fetchJson(url, { headers: headers() });
         return toolResult(data);
       } catch (err) {
@@ -252,7 +252,7 @@ export function register(server: McpServer): void {
     },
     async ({ sport, season, search }) => {
       try {
-        const url = buildUrl(`${BASE}/${sport}/${season}/players.json`, { search });
+        const url = buildUrl(`${BASE}/${pathSegment(sport)}/${pathSegment(season)}/players.json`, { search });
         const data = await fetchJson(url, { headers: headers() });
         return toolResult(data);
       } catch (err) {

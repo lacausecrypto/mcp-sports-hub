@@ -5,12 +5,24 @@ import { fetchJson, buildUrl, toolResult, errorResult } from "../shared/http.js"
 // ---------------------------------------------------------------------------
 // Golf Course API provider — 6 tools
 // Base: https://api.golfcourseapi.com/v1/
-// Auth: None (public API)
+// Auth: Bearer token (free tier requires email signup)
+//        Set GOLFCOURSE_API_KEY env var.
 // ---------------------------------------------------------------------------
 
 const BASE = "https://api.golfcourseapi.com/v1";
 
 export function register(server: McpServer): void {
+  const API_KEY = process.env.GOLFCOURSE_API_KEY;
+
+  function authHeaders(): Record<string, string> {
+    if (!API_KEY) {
+      throw new Error(
+        "GOLFCOURSE_API_KEY env var is required. Get a free key at https://golfcourseapi.com/",
+      );
+    }
+    return { Authorization: `Key ${API_KEY}` };
+  }
+
   // 1. golfcourse_search_courses
   server.tool(
     "golfcourse_search_courses",
@@ -24,7 +36,7 @@ export function register(server: McpServer): void {
     async ({ search, country, state, limit }) => {
       try {
         const url = buildUrl(`${BASE}/courses/search`, { search, country, state, limit });
-        const data = await fetchJson(url);
+        const data = await fetchJson(url, { headers: authHeaders() });
         return toolResult(data);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
@@ -42,7 +54,7 @@ export function register(server: McpServer): void {
     async ({ course_id }) => {
       try {
         const url = `${BASE}/courses/${encodeURIComponent(course_id)}`;
-        const data = await fetchJson(url);
+        const data = await fetchJson(url, { headers: authHeaders() });
         return toolResult(data);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
@@ -62,7 +74,7 @@ export function register(server: McpServer): void {
     async ({ lat, lng, radius }) => {
       try {
         const url = buildUrl(`${BASE}/courses/nearby`, { lat, lng, radius });
-        const data = await fetchJson(url);
+        const data = await fetchJson(url, { headers: authHeaders() });
         return toolResult(data);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
@@ -77,7 +89,7 @@ export function register(server: McpServer): void {
     {},
     async () => {
       try {
-        const data = await fetchJson(`${BASE}/countries`);
+        const data = await fetchJson(`${BASE}/countries`, { headers: authHeaders() });
         return toolResult(data);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
@@ -95,7 +107,7 @@ export function register(server: McpServer): void {
     async ({ country_code }) => {
       try {
         const url = `${BASE}/countries/${encodeURIComponent(country_code)}/states`;
-        const data = await fetchJson(url);
+        const data = await fetchJson(url, { headers: authHeaders() });
         return toolResult(data);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
@@ -113,7 +125,7 @@ export function register(server: McpServer): void {
     async ({ course_id }) => {
       try {
         const url = `${BASE}/courses/${encodeURIComponent(course_id)}/reviews`;
-        const data = await fetchJson(url);
+        const data = await fetchJson(url, { headers: authHeaders() });
         return toolResult(data);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));

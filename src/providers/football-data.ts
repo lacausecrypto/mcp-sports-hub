@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { fetchJson, buildUrl, toolResult, errorResult } from "../shared/http.js";
+import { fetchJson, buildUrl, toolResult, errorResult, pathSegment } from "../shared/http.js";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -62,7 +62,7 @@ export function register(server: McpServer): void {
         .describe("Competition code (e.g., PL, CL, BL1, SA, PD, FL1, DED, PPL, ELC, EC, WC, CLI)"),
     },
     async ({ competition_code }) => {
-      return callApi(`/competitions/${competition_code}`);
+      return callApi(`/competitions/${pathSegment(competition_code)}`);
     },
   );
 
@@ -87,7 +87,7 @@ export function register(server: McpServer): void {
       const params: Record<string, string | number | undefined> = {};
       if (season !== undefined) params.season = season;
       if (matchday !== undefined) params.matchday = matchday;
-      return callApi(`/competitions/${competition_code}/standings`, params);
+      return callApi(`/competitions/${pathSegment(competition_code)}/standings`, params);
     },
   );
 
@@ -128,7 +128,7 @@ export function register(server: McpServer): void {
       const params: Record<string, string | number | undefined> = {};
 
       if (competition_code) {
-        path = `/competitions/${competition_code}/matches`;
+        path = `/competitions/${pathSegment(competition_code)}/matches`;
       } else if (team_id) {
         path = `/teams/${team_id}/matches`;
       } else {
@@ -178,7 +178,7 @@ export function register(server: McpServer): void {
     async ({ competition_code, season }) => {
       const params: Record<string, string | number | undefined> = {};
       if (season !== undefined) params.season = season;
-      return callApi(`/competitions/${competition_code}/teams`, params);
+      return callApi(`/competitions/${pathSegment(competition_code)}/teams`, params);
     },
   );
 
@@ -249,7 +249,7 @@ export function register(server: McpServer): void {
       const params: Record<string, string | number | undefined> = {};
       if (season !== undefined) params.season = season;
       if (limit !== undefined) params.limit = limit;
-      return callApi(`/competitions/${competition_code}/scorers`, params);
+      return callApi(`/competitions/${pathSegment(competition_code)}/scorers`, params);
     },
   );
 

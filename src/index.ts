@@ -2,6 +2,7 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { VERSION } from "./shared/version.js";
 
 // ---------------------------------------------------------------------------
 // Provider registry — maps provider name to its register function (lazy import)
@@ -18,6 +19,9 @@ const PROVIDERS: Record<string, () => Promise<{ register: (s: McpServer) => void
   golfcourse:     () => import("./providers/golfcourse.js"),
   sportsdb:       () => import("./providers/thesportsdb.js"),
   ncaa:           () => import("./providers/ncaa.js"),
+  lichess:        () => import("./providers/lichess.js"),
+  chesscom:       () => import("./providers/chess-com.js"),
+  squiggle:       () => import("./providers/squiggle.js"),
 
   // Key required
   apisports:      () => import("./providers/api-sports.js"),
@@ -58,7 +62,9 @@ const PROVIDERS: Record<string, () => Promise<{ register: (s: McpServer) => void
 //   "f1"               → f1,openf1
 //   "esports"          → pandascore
 //   "odds"             → odds,oddsio,sgo
-//   "free"             → espn,nhl,mlb,f1,openf1,openliga,golfcourse,sportsdb,ncaa
+//   "free"             → espn,nhl,mlb,f1,openf1,openliga,sportsdb,ncaa,sportsrc,
+//                          lichess,chesscom,squiggle (12 providers — no key, no signup)
+//   "chess"            → lichess,chesscom
 // ---------------------------------------------------------------------------
 
 const PRESETS: Record<string, string[]> = {
@@ -69,7 +75,8 @@ const PRESETS: Record<string, string[]> = {
   "odds":      ["odds", "oddsio", "sgo"],
   "cricket":   ["cricket", "entitycricket"],
   "golf":      ["livegolf", "golfcourse"],
-  "free":      ["espn", "nhl", "mlb", "f1", "openf1", "openliga", "golfcourse", "sportsdb", "ncaa"],
+  "free":      ["espn", "nhl", "mlb", "f1", "openf1", "openliga", "sportsdb", "ncaa", "sportsrc", "lichess", "chesscom", "squiggle"],
+  "chess":     ["lichess", "chesscom"],
 };
 
 function resolveProviders(): string[] {
@@ -110,7 +117,7 @@ async function main() {
 
   const server = new McpServer({
     name: "sports-hub",
-    version: "1.1.0",
+    version: VERSION,
   });
 
   // Load and register selected providers
@@ -134,7 +141,7 @@ async function main() {
     console.error("");
     console.error("  ⚠ All 29 providers loaded (319 tools).");
     console.error("    LLMs work best with fewer tools. Consider using a preset:");
-    console.error("    SPORTS_HUB_PROVIDERS=free       → 9 providers, ~98 tools (no keys needed)");
+    console.error("    SPORTS_HUB_PROVIDERS=free       → 12 providers, ~109 tools (no keys needed)");
     console.error("    SPORTS_HUB_PROVIDERS=us-major   → 7 providers, ~79 tools");
     console.error("    SPORTS_HUB_PROVIDERS=soccer     → 6 providers, ~69 tools");
     console.error("");
@@ -142,9 +149,33 @@ async function main() {
 
   // Transport: stdio (default) or HTTP (--http flag or SPORTS_HUB_HTTP=1)
   const useHttp = process.argv.includes("--http") || process.env.SPORTS_HUB_HTTP === "1";
-  const port = parseInt(process.env.SPORTS_HUB_PORT ?? "3000", 10);
+
+  const portRaw = process.env.SPORTS_HUB_PORT ?? "3000";
+  const port = Number.parseInt(portRaw, 10);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    console.error(`Invalid SPORTS_HUB_PORT: ${portRaw}. Must be 1-65535.`);
+    process.exit(1);
+  }
 
   if (useHttp) {
+    // Bind to loopback by default. Set SPORTS_HUB_HOST=0.0.0.0 to expose
+    // on the network — only do this if you understand the implications
+    // (see SPORTS_HUB_ALLOWED_HOSTS / SPORTS_HUB_ALLOWED_ORIGINS below).
+    const host = process.env.SPORTS_HUB_HOST ?? "127.0.0.1";
+
+    // DNS-rebinding protection. Allowed hosts are matched against the Host
+    // header; allowed origins against the Origin header. The MCP spec
+    // recommends enabling this for local HTTP servers because a malicious
+    // page can otherwise fool a browser into hitting localhost on the
+    // user's machine.
+    const allowedHosts = (process.env.SPORTS_HUB_ALLOWED_HOSTS
+      ?? `127.0.0.1,127.0.0.1:${port},localhost,localhost:${port}`)
+      .split(",").map((s) => s.trim()).filter(Boolean);
+    const allowedOriginsEnv = process.env.SPORTS_HUB_ALLOWED_ORIGINS;
+    const allowedOrigins = allowedOriginsEnv
+      ? allowedOriginsEnv.split(",").map((s) => s.trim()).filter(Boolean)
+      : undefined;
+
     const { createServer } = await import("node:http");
     const { StreamableHTTPServerTransport } = await import(
       "@modelcontextprotocol/sdk/server/streamableHttp.js"
@@ -153,16 +184,27 @@ async function main() {
 
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: () => randomUUID(),
+      enableDnsRebindingProtection: true,
+      allowedHosts,
+      ...(allowedOrigins ? { allowedOrigins } : {}),
     });
 
     await server.connect(transport);
 
+    // CORS allowlist. Defaults to "no CORS" — only set
+    // SPORTS_HUB_CORS_ORIGINS if you actually need browser clients.
+    const corsOrigins = (process.env.SPORTS_HUB_CORS_ORIGINS ?? "")
+      .split(",").map((s) => s.trim()).filter(Boolean);
+
     const httpServer = createServer((req, res) => {
-      // CORS headers
-      res.setHeader("Access-Control-Allow-Origin", "*");
-      res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
-      res.setHeader("Access-Control-Allow-Headers", "Content-Type, mcp-session-id, Accept");
-      res.setHeader("Access-Control-Expose-Headers", "mcp-session-id");
+      const origin = req.headers.origin;
+      if (corsOrigins.length > 0 && origin && corsOrigins.includes(origin)) {
+        res.setHeader("Access-Control-Allow-Origin", origin);
+        res.setHeader("Vary", "Origin");
+        res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
+        res.setHeader("Access-Control-Allow-Headers", "Content-Type, mcp-session-id, Accept");
+        res.setHeader("Access-Control-Expose-Headers", "mcp-session-id");
+      }
 
       if (req.method === "OPTIONS") {
         res.writeHead(204);
@@ -170,7 +212,6 @@ async function main() {
         return;
       }
 
-      // Route /mcp and / to the transport
       const path = req.url?.split("?")[0] ?? "/";
       if (path === "/mcp" || path === "/") {
         transport.handleRequest(req, res);
@@ -183,10 +224,16 @@ async function main() {
       }
     });
 
-    httpServer.listen(port, () => {
-      console.error(`Sports Hub HTTP running — ${selected.length} providers on http://localhost:${port}`);
+    httpServer.listen(port, host, () => {
+      const exposedNote = host === "0.0.0.0" || host === "::"
+        ? " ⚠ exposed on all interfaces"
+        : "";
+      console.error(`Sports Hub HTTP running — ${selected.length} providers on http://${host}:${port}${exposedNote}`);
       console.error(`  POST /mcp     → MCP protocol (Streamable HTTP)`);
       console.error(`  GET  /health  → Health check`);
+      console.error(`  Allowed hosts:   ${allowedHosts.join(", ")}`);
+      if (allowedOrigins) console.error(`  Allowed origins: ${allowedOrigins.join(", ")}`);
+      if (corsOrigins.length > 0) console.error(`  CORS origins:    ${corsOrigins.join(", ")}`);
     });
   } else {
     const transport = new StdioServerTransport();
