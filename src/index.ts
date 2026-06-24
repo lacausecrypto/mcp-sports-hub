@@ -190,11 +190,18 @@ async function main() {
     );
     const { randomUUID } = await import("node:crypto");
 
+    // DNS-rebinding protection is ON by default — correct for a local HTTP
+    // server a browser could reach on localhost. Behind a managed host (e.g.
+    // Smithery) the proxied Host header is not localhost, so the check would
+    // reject every request; set SPORTS_HUB_DNS_REBINDING_PROTECTION=0 there.
+    const dnsRebindingProtection =
+      process.env.SPORTS_HUB_DNS_REBINDING_PROTECTION !== "0";
+
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: () => randomUUID(),
-      enableDnsRebindingProtection: true,
-      allowedHosts,
-      ...(allowedOrigins ? { allowedOrigins } : {}),
+      enableDnsRebindingProtection: dnsRebindingProtection,
+      ...(dnsRebindingProtection ? { allowedHosts } : {}),
+      ...(dnsRebindingProtection && allowedOrigins ? { allowedOrigins } : {}),
     });
 
     await server.connect(transport);
@@ -246,8 +253,12 @@ async function main() {
       console.error(`Sports Hub HTTP running — ${selected.length} providers on http://${host}:${port}${exposedNote}`);
       console.error(`  POST /mcp     → MCP protocol (Streamable HTTP)`);
       console.error(`  GET  /health  → Health check`);
-      console.error(`  Allowed hosts:   ${allowedHosts.join(", ")}`);
-      if (allowedOrigins) console.error(`  Allowed origins: ${allowedOrigins.join(", ")}`);
+      if (dnsRebindingProtection) {
+        console.error(`  Allowed hosts:   ${allowedHosts.join(", ")}`);
+        if (allowedOrigins) console.error(`  Allowed origins: ${allowedOrigins.join(", ")}`);
+      } else {
+        console.error(`  ⚠ DNS-rebinding protection DISABLED (SPORTS_HUB_DNS_REBINDING_PROTECTION=0)`);
+      }
       if (corsOrigins.length > 0) console.error(`  CORS origins:    ${corsOrigins.join(", ")}`);
     });
   } else {
