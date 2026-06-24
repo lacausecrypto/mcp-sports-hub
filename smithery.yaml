@@ -1,0 +1,32 @@
+# Smithery configuration: https://smithery.ai/docs/build/project-config
+# Custom-container deployment of the Sports Hub MCP server.
+
+runtime: container
+
+build:
+  dockerfile: Dockerfile
+  dockerBuildPath: .
+
+startCommand:
+  type: http
+  # The hosted endpoint serves the keyless "free" preset (19 providers,
+  # ~165 tools) — so no per-session configuration is required. Users who want
+  # the key-gated providers should self-host with their own env vars
+  # (npx mcp-sports-hub). See the README provider reference.
+  configSchema:
+    type: object
+    properties: {}
+    required: []
+  exampleConfig: {}
+
+# Applied by Smithery at deploy time. Kept here (not baked into the Dockerfile)
+# so the image stays generic — stdio by default, HTTP only on Smithery.
+#  - SPORTS_HUB_HTTP=1                         enable Streamable HTTP transport
+#  - SPORTS_HUB_HOST=0.0.0.0                   bind all interfaces in-container
+#  - SPORTS_HUB_PROVIDERS=free                 keyless providers only
+#  - SPORTS_HUB_DNS_REBINDING_PROTECTION=0     accept Smithery's proxied Host
+env:
+  SPORTS_HUB_HTTP: "1"
+  SPORTS_HUB_HOST: "0.0.0.0"
+  SPORTS_HUB_PROVIDERS: "free"
+  SPORTS_HUB_DNS_REBINDING_PROTECTION: "0"

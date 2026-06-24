@@ -1,0 +1,19 @@
+# Keep the Docker build context small. The Dockerfile copies only the files it
+# needs (package*.json, tsconfig.json, src/), so everything else is excluded.
+node_modules
+dist
+*.tsbuildinfo
+video/
+docs/
+.github/
+.git
+.gitignore
+.env
+.env.*
+.mcpregistry_*
+*.mcpb
+*.md
+!README.md
+!LICENSE
+.mcpbignore
+.dockerignore

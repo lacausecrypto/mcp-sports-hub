@@ -188,6 +188,12 @@ Supports CORS, session management via `mcp-session-id` header. Default port: 300
 
 > **⚠ Security**: HTTP mode binds to `127.0.0.1` (loopback) by default. Setting `SPORTS_HUB_HOST=0.0.0.0` exposes an **unauthenticated** MCP endpoint to your whole network — anyone who can reach it can use your configured API keys. DNS-rebinding protection only blocks browser-origin attacks, not direct clients. Only expose it behind a reverse proxy with auth/TLS. `SPORTS_HUB_CORS_ORIGINS` must list explicit origins (a literal `*` is rejected).
 
+### Hosted (Smithery)
+
+A `Dockerfile` and `smithery.yaml` are included for container hosting on [Smithery](https://smithery.ai). The hosted endpoint serves the keyless `free` preset, so clients connect with zero setup. The deploy sets `SPORTS_HUB_DNS_REBINDING_PROTECTION=0` because Smithery's proxy forwards a non-localhost `Host` header.
+
+> `SPORTS_HUB_DNS_REBINDING_PROTECTION=0` disables the Host/Origin check (it is **on** by default). Only set it when the server runs behind a trusted proxy that owns routing — never for a server directly reachable by browsers on localhost.
+
 ## Configuration
 
 ### Environment Variables
