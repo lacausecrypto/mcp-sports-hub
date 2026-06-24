@@ -12,8 +12,8 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Providers-32-orange" alt="32 Providers">
-  <img src="https://img.shields.io/badge/Tools-336-green" alt="336 Tools">
+  <img src="https://img.shields.io/badge/Providers-41-orange" alt="41 Providers">
+  <img src="https://img.shields.io/badge/Tools-396-green" alt="396 Tools">
   <a href="https://registry.modelcontextprotocol.io"><img src="https://img.shields.io/badge/MCP_Registry-published-8B5CF6?logo=anthropic&logoColor=white" alt="MCP Registry"></a>
 </p>
 
