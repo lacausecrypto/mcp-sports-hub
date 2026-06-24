@@ -83,8 +83,46 @@ const TEST_CASES = {
     { tool: "squiggle_get_games", args: { year: 2024, round: 1 } },
     { tool: "squiggle_get_sources", args: {} },
   ],
+  "motogp.js": [
+    { tool: "motogp_get_seasons", args: {} },
+    { tool: "motogp_get_riders", args: {} },
+  ],
+  "formula-e.js": [
+    { tool: "formulae_get_championships", args: {} },
+    { tool: "formulae_get_races", args: {} },
+    { tool: "formulae_get_teams", args: {} },
+  ],
+  "nascar.js": [
+    { tool: "nascar_get_schedule", args: { year: 2025, series_id: 1 } },
+    { tool: "nascar_get_live", args: {} },
+  ],
+  "sleeper.js": [
+    { tool: "sleeper_get_nfl_state", args: {} },
+    { tool: "sleeper_search_players", args: { query: "mahomes" } },
+    { tool: "sleeper_get_trending_players", args: { type: "add", limit: 3 } },
+  ],
+  "opendota.js": [
+    { tool: "opendota_get_pro_matches", args: {} },
+    { tool: "opendota_get_heroes", args: {} },
+    { tool: "opendota_get_pro_teams", args: {} },
+  ],
+  "euroleague.js": [
+    { tool: "euroleague_get_games", args: { competition: "E", season_year: 2024 } },
+    { tool: "euroleague_get_clubs", args: { competition: "E", season_year: 2024 } },
+    { tool: "euroleague_get_game_header", args: { game_code: 1, competition: "E", season_year: 2024 } },
+  ],
+  "football-data-uk.js": [
+    { tool: "footballdata_uk_list_leagues", args: {} },
+    { tool: "footballdata_uk_get_matches", args: { league: "E0", season: "2425", limit: 5 } },
+  ],
 
   // ─── Key-required providers (skipped if env key missing) ─────────────────
+  "boxing.js": [
+    { tool: "boxing_get_divisions", args: {}, envs: ["BOXING_DATA_API_KEY"] },
+  ],
+  "highlightly.js": [
+    { tool: "highlightly_get_leagues", args: { sport: "football", limit: 2 }, envs: ["HIGHLIGHTLY_API_KEY"] },
+  ],
   "the-odds-api.js": [
     { tool: "odds_get_sports", args: {}, envs: ["THE_ODDS_API_KEY"] },
   ],

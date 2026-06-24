@@ -6,3 +6,9 @@ dist/
 .env.*
 .mcpregistry_*
 .npmrc
+
+# Local-only Remotion presentation video project (not part of the package)
+video/
+
+# MCPB bundle build artifact (built from manifest.json via `npm run bundle`)
+*.mcpb

@@ -105,7 +105,7 @@ Or in your global Claude Code settings at `~/.claude/settings.json`:
 
 ## Notes
 
-- Keys are checked at **call time**, not at startup. The server always starts with all 205 tools registered. If you call a tool that requires a missing key, you get an error message like `"API_FOOTBALL_KEY env var is required"`.
+- Keys are checked at **call time**, not at startup. The server registers whichever providers are selected (the `free` preset by default — 19 providers / ~165 tools — or all 41 providers / 396 tools with `SPORTS_HUB_PROVIDERS=all`). If you call a tool that requires a missing key, you get an error message like `"API_FOOTBALL_KEY env var is required"`.
 - You can use shell environment variables instead of the `env` block in the config file. The `env` block in the config overrides shell variables.
 - The `args` path must be absolute. Use the full path to `dist/index.js` in your clone of the repo.
 - Run `npm run build` after cloning or updating the repo. The server runs the compiled JavaScript from `dist/`.

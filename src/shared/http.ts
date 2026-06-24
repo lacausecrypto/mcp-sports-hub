@@ -161,6 +161,31 @@ export async function fetchNdjson(
 }
 
 /**
+ * Fetch raw text (e.g. CSV) with the same caching/timeout/error handling as
+ * fetchJson. Used by providers whose upstream serves non-JSON payloads.
+ */
+export async function fetchText(
+  url: string,
+  options: HttpOptions = {},
+): Promise<string> {
+  const method = options.method ?? "GET";
+  const ttl = options.cacheTtl ?? (method === "GET" ? DEFAULT_CACHE_TTL : 0);
+  const cacheKey = `TEXT:${method}:${url}`;
+
+  if (ttl > 0) {
+    const cached = getCached(cacheKey);
+    if (cached !== undefined) return cached as string;
+  }
+
+  const headers = { Accept: "text/csv, text/plain, */*", ...(options.headers ?? {}) };
+  const response = await rawFetch(url, { ...options, headers });
+  const text = await response.text();
+
+  if (ttl > 0) setCache(cacheKey, text, ttl);
+  return text;
+}
+
+/**
  * Build a URL with query parameters, skipping undefined/null/empty values.
  */
 export function buildUrl(

@@ -21,7 +21,7 @@
   <img src="https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white" alt="TypeScript">
 </p>
 
-A unified MCP server that aggregates **32 sports API providers** into a single service. **336 tools** covering scores, stats, odds, esports, college sports, chess, AFL, and more across 70+ sports.
+A unified MCP server that aggregates **41 sports API providers** into a single service. **396 tools** covering scores, stats, odds, esports, college sports, chess, motorsport, boxing, AFL, and more across 70+ sports.
 
 > Each provider works independently. You only need API keys for the providers you use. Missing keys don't block startup — tools return an error when called without their key.
 
@@ -71,7 +71,7 @@ Uses the **stdio transport** from the [MCP SDK](https://modelcontextprotocol.io)
 
 ## Providers (32)
 
-### Works instantly — no API key, no signup (12 providers, ~109 tools)
+### Works instantly — no API key, no signup (19 providers, ~165 tools)
 
 These providers work out of the box. Just build and run.
 
@@ -89,10 +89,17 @@ These providers work out of the box. Just build and run.
 | `lichess_` | [Lichess](https://lichess.org/api) | Chess (users, top players, broadcasts, daily puzzle) | 7 | ~20 req/sec/IP |
 | `chesscom_` | [Chess.com](https://www.chess.com/news/view/published-data-api) | Chess (profiles, stats, clubs, leaderboards) | 7 | Throttles on parallel calls |
 | `squiggle_` | [Squiggle](https://api.squiggle.com.au/) | AFL (Australian Football League) | 6 | Honest UA required |
+| `motogp_` | [MotoGP](https://www.motogp.com/) | MotoGP/Moto2/Moto3/MotoE | 7 | Unofficial — can break |
+| `formulae_` | [Formula E](https://www.fiaformulae.com/) | Formula E | 7 | Unofficial — can break |
+| `nascar_` | [NASCAR](https://www.nascar.com/) | NASCAR Cup/Xfinity/Truck | 3 | Unofficial CDN feeds |
+| `opendota_` | [OpenDota](https://www.opendota.com/) | Dota 2 analytics | 11 | 60 req/min, 50k/mo |
+| `sleeper_` | [Sleeper](https://docs.sleeper.com/) | NFL fantasy | 10 | ~1000 req/min |
+| `euroleague_` | [EuroLeague](https://www.euroleaguebasketball.net/) | EuroLeague + EuroCup basketball | 6 | Keyless feeds |
+| `footballdata_uk_` | [Football-Data.co.uk](https://www.football-data.co.uk/) | Historical football results + odds | 2 | CSV, 25+ leagues |
 
-> **Tip**: Use `SPORTS_HUB_PROVIDERS=free` to load only these 12 providers (~109 tools).
+> **Tip**: Use `SPORTS_HUB_PROVIDERS=free` to load only these 19 providers (~165 tools).
 
-### Free tier with API key — signup required, no credit card (21 providers, ~227 tools)
+### Free tier with API key — signup required, no credit card (22 providers, ~231 tools)
 
 Registration takes 1-2 minutes. All keys are free.
 
@@ -118,6 +125,8 @@ Registration takes 1-2 minutes. All keys are free.
 | `msf_` | MySportsFeeds | NFL/NBA/MLB/NHL | 12 | Free non-commercial | [Sign up](https://www.mysportsfeeds.com/) |
 | `golfcourse_` | GolfCourseAPI | 30K+ golf courses | 6 | 300 req/day | [Sign up](https://golfcourseapi.com/) |
 | `cfbd_` | College Football Data | NCAA football | 14 | 1000 req/mo | [Sign up](https://collegefootballdata.com/key) |
+| `boxing_` | Boxing Data API | Pro boxing (fighters/bouts/titles) | 8 | 100 req/mo | [Sign up](https://rapidapi.com/) |
+| `highlightly_` | Highlightly | Multi-sport highlights + odds | 6 | 100 req/day | [Sign up](https://highlightly.net/) |
 
 > Providers with missing keys don't block the server — they just return an error when called. Register keys incrementally as you need them.
 
@@ -169,9 +178,11 @@ SPORTS_HUB_HTTP=1 SPORTS_HUB_PORT=3000 npx mcp-sports-hub
 
 Endpoints:
 - `POST /mcp` — MCP protocol (Streamable HTTP with SSE)
-- `GET /health` — Health check (`{"status":"ok","providers":9}`)
+- `GET /health` — Health check (`{"status":"ok","providers":19}`)
 
 Supports CORS, session management via `mcp-session-id` header. Default port: 3000.
+
+> **⚠ Security**: HTTP mode binds to `127.0.0.1` (loopback) by default. Setting `SPORTS_HUB_HOST=0.0.0.0` exposes an **unauthenticated** MCP endpoint to your whole network — anyone who can reach it can use your configured API keys. DNS-rebinding protection only blocks browser-origin attacks, not direct clients. Only expose it behind a reverse proxy with auth/TLS. `SPORTS_HUB_CORS_ORIGINS` must list explicit origins (a literal `*` is rejected).
 
 ## Configuration
 
@@ -182,7 +193,8 @@ Only set keys for providers you want:
 ```bash
 # Free — no key needed:
 # ESPN, NHL, MLB, Jolpica F1, OpenF1, OpenLigaDB, NCAA, TheSportsDB (test key),
-# SportSRC (V1), Lichess, Chess.com, Squiggle (AFL)
+# SportSRC (V1), Lichess, Chess.com, Squiggle (AFL),
+# MotoGP, Formula E, NASCAR, OpenDota, Sleeper
 
 # Optional (defaults to test key)
 export THESPORTSDB_API_KEY="your-key"          # https://www.thesportsdb.com/
@@ -273,13 +285,13 @@ Or in `.claude/settings.json`:
 
 ## Provider Filtering
 
-By default, only the **free preset** is loaded (9 providers, ~98 tools — no API keys needed). Use `SPORTS_HUB_PROVIDERS` to change what's loaded:
+By default, only the **free preset** is loaded (19 providers, ~165 tools — no API keys needed). Use `SPORTS_HUB_PROVIDERS` to change what's loaded:
 
 ```bash
 # Default — free providers only (no config needed)
 npx mcp-sports-hub
 
-# Load ALL 29 providers (319 tools)
+# Load ALL 41 providers (396 tools)
 SPORTS_HUB_PROVIDERS=all npx mcp-sports-hub
 
 # Use a preset
@@ -296,13 +308,14 @@ SPORTS_HUB_PROVIDERS=-sportsdata,-mma npx mcp-sports-hub
 
 | Preset | Providers | Tools | Needs keys? |
 |--------|-----------|-------|-------------|
-| `free` (default) | espn, nhl, mlb, f1, openf1, openliga, sportsdb, ncaa, sportsrc, lichess, chesscom, squiggle | ~109 | No |
-| `all` | all 32 providers | 336 | Yes (for key-required providers) |
+| `free` (default) | 19 no-key providers (espn, nhl, mlb, f1, openf1, openliga, sportsdb, ncaa, sportsrc, lichess, chesscom, squiggle, motogp, formulae, nascar, opendota, sleeper, euroleague, footballdatauk) | ~165 | No |
+| `all` | all 41 providers | 396 | Yes (for key-required providers) |
 | `chess` | lichess, chesscom | 14 | No |
-| `us-major` | espn, nhl, mlb, ncaa, cfbd, bdl, msf | ~79 | Some |
-| `soccer` | espn, apifootball, footballdata, sportmonks, openliga, sportsrc | ~69 | Some |
+| `us-major` | espn, nhl, mlb, ncaa, cfbd, bdl, msf, nascar, sleeper | ~93 | Some |
+| `soccer` | espn, apifootball, footballdata, sportmonks, openliga, sportsrc, footballdatauk, highlightly | ~73 | Some |
 | `f1` | f1, openf1 | 25 | No |
-| `esports` | pandascore | 14 | Yes |
+| `motorsport` | f1, openf1, motogp, formulae, nascar | ~42 | No |
+| `esports` | pandascore, opendota | 25 | Some |
 | `odds` | odds, oddsio, sgo | 29 | Yes |
 | `cricket` | cricket, entitycricket | 22 | Yes |
 | `golf` | livegolf, golfcourse | 14 | Some |
@@ -339,13 +352,31 @@ odds_get_odds              — Betting odds (70+ sports)
 sportsrc_get_xg_stats      — Expected goals (xG)
 ```
 
+## MCP Resources & Prompts
+
+Beyond tools, the server exposes:
+
+**Resources** (readable catalogs, no API call):
+- `sportshub://providers` — the full provider catalog (prefix, name, coverage, required key)
+- `sportshub://presets` — all presets and the providers they load
+- `sportshub://provider/{key}` — details for one provider (with key autocompletion)
+
+**Prompts** (curated slash-command workflows over the 396 tools):
+- `whats-on-today` · `compare-odds {event}` · `motorsport-weekend {series}` · `league-standings {league}` · `team-deep-dive {team}` · `f1-race {season} {round}`
+
+All tools are annotated `readOnly` / `idempotent` so clients can skip confirmation prompts.
+
 ## Architecture
 
 ```
 src/
-├── index.ts                    # Imports + registers all 29 providers
+├── index.ts                    # Imports + registers all 41 providers
 ├── shared/
-│   └── http.ts                 # fetchJson, buildUrl, toolResult, errorResult
+│   ├── http.ts                 # fetchJson, fetchText, buildUrl, toolResult, errorResult
+│   ├── catalog.ts              # provider catalog + presets (single source of truth)
+│   ├── annotations.ts          # central read-only annotations + titles
+│   ├── resources.ts            # MCP resources (provider/preset catalogs)
+│   └── prompts.ts              # MCP prompts (curated workflows)
 └── providers/
     ├── espn.ts                 #  10 tools — no key
     ├── nhl.ts                  #  13 tools — no key
@@ -378,7 +409,16 @@ src/
     ├── cfbd.ts                 #  14 tools — CFBD_API_KEY
     ├── lichess.ts              #   7 tools — no key
     ├── chess-com.ts            #   7 tools — no key
-    └── squiggle.ts             #   6 tools — no key
+    ├── squiggle.ts             #   6 tools — no key
+    ├── motogp.ts               #   7 tools — no key
+    ├── formula-e.ts            #   7 tools — no key
+    ├── nascar.ts               #   3 tools — no key
+    ├── opendota.ts             #  11 tools — no key
+    ├── sleeper.ts              #  10 tools — no key
+    ├── euroleague.ts           #   6 tools — no key
+    ├── football-data-uk.ts     #   2 tools — no key (CSV)
+    ├── boxing.ts               #   8 tools — BOXING_DATA_API_KEY
+    └── highlightly.ts          #   6 tools — HIGHLIGHTLY_API_KEY
 ```
 
 Each provider exports `register(server)`. Keys are checked at call time, not startup.

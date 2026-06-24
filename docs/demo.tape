@@ -11,7 +11,7 @@ Set Shell bash
 Type "echo ''"
 Enter
 Sleep 300ms
-Type "echo '  ⚡ mcp-sports-hub — 29 providers, 319 tools, 70+ sports'"
+Type "echo '  ⚡ mcp-sports-hub — 41 providers, 396 tools, 70+ sports'"
 Enter
 Sleep 300ms
 Type "echo ''"
@@ -91,6 +91,6 @@ Sleep 2.5s
 Type "echo ''"
 Enter
 Sleep 200ms
-Type "echo '  9 providers work without any API key. Just install and go!'"
+Type "echo '  19 providers work without any API key. Just install and go!'"
 Enter
 Sleep 3s

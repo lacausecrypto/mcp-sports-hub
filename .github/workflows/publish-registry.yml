@@ -1,0 +1,37 @@
+name: Publish to MCP Registry
+
+# Re-publishes server.json to the official MCP Registry
+# (registry.modelcontextprotocol.io) on every GitHub Release.
+#
+# Auth is via GitHub OIDC — no stored tokens. This works because server.json's
+# name is "io.github.lacausecrypto/sports-hub" and this workflow runs in the
+# matching repo, which the registry trusts for that namespace.
+#
+# IMPORTANT ordering: the registry validates that the npm package version in
+# server.json already exists on npm. Publish to npm FIRST (e.g. `npm publish`
+# during your release), then let this run on the published Release.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch: {}
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write   # required for OIDC login to the registry
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install mcp-publisher
+        run: |
+          curl -sSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_amd64.tar.gz" \
+            | tar -xz mcp-publisher
+
+      - name: Log in via GitHub OIDC
+        run: ./mcp-publisher login github-oidc
+
+      - name: Publish server.json
+        run: ./mcp-publisher publish

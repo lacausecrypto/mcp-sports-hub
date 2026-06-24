@@ -3,6 +3,10 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { VERSION } from "./shared/version.js";
+import { captureToolAnnotations } from "./shared/annotations.js";
+import { PRESETS } from "./shared/catalog.js";
+import { registerResources } from "./shared/resources.js";
+import { registerPrompts } from "./shared/prompts.js";
 
 // ---------------------------------------------------------------------------
 // Provider registry — maps provider name to its register function (lazy import)
@@ -22,6 +26,13 @@ const PROVIDERS: Record<string, () => Promise<{ register: (s: McpServer) => void
   lichess:        () => import("./providers/lichess.js"),
   chesscom:       () => import("./providers/chess-com.js"),
   squiggle:       () => import("./providers/squiggle.js"),
+  motogp:         () => import("./providers/motogp.js"),
+  formulae:       () => import("./providers/formula-e.js"),
+  nascar:         () => import("./providers/nascar.js"),
+  opendota:       () => import("./providers/opendota.js"),
+  sleeper:        () => import("./providers/sleeper.js"),
+  euroleague:     () => import("./providers/euroleague.js"),
+  footballdatauk: () => import("./providers/football-data-uk.js"),
 
   // Key required
   apisports:      () => import("./providers/api-sports.js"),
@@ -44,6 +55,8 @@ const PROVIDERS: Record<string, () => Promise<{ register: (s: McpServer) => void
   pandascore:     () => import("./providers/pandascore.js"),
   sportsrc:       () => import("./providers/sportsrc.js"),
   cfbd:           () => import("./providers/cfbd.js"),
+  boxing:         () => import("./providers/boxing.js"),
+  highlightly:    () => import("./providers/highlightly.js"),
 };
 
 // ---------------------------------------------------------------------------
@@ -51,33 +64,15 @@ const PROVIDERS: Record<string, () => Promise<{ register: (s: McpServer) => void
 // ---------------------------------------------------------------------------
 // SPORTS_HUB_PROVIDERS controls which providers to load.
 //
-//   Not set / empty    → load "free" preset (9 providers, ~98 tools)
-//   "all"              → load ALL 29 providers (319 tools)
+//   Not set / empty    → load "free" preset (19 providers, ~165 tools)
+//   "all"              → load ALL 41 providers (396 tools)
 //   "espn,nhl,mlb"     → load only these 3 (36 tools)
 //   "-odds,-oddsio"    → load all EXCEPT these (prefix with -)
 //
-// Presets for common use cases:
-//   "us-major"         → espn,nhl,mlb,ncaa,cfbd,bdl,msf
-//   "soccer"           → espn,apifootball,footballdata,sportmonks,openliga,sportsrc
-//   "f1"               → f1,openf1
-//   "esports"          → pandascore
-//   "odds"             → odds,oddsio,sgo
-//   "free"             → espn,nhl,mlb,f1,openf1,openliga,sportsdb,ncaa,sportsrc,
-//                          lichess,chesscom,squiggle (12 providers — no key, no signup)
-//   "chess"            → lichess,chesscom
+// Presets (defined in shared/catalog.ts):
+//   "us-major", "soccer", "f1", "motorsport", "esports", "odds", "cricket",
+//   "golf", "chess", and "free" (all 19 no-key providers — the default).
 // ---------------------------------------------------------------------------
-
-const PRESETS: Record<string, string[]> = {
-  "us-major":  ["espn", "nhl", "mlb", "ncaa", "cfbd", "bdl", "msf"],
-  "soccer":    ["espn", "apifootball", "footballdata", "sportmonks", "openliga", "sportsrc"],
-  "f1":        ["f1", "openf1"],
-  "esports":   ["pandascore"],
-  "odds":      ["odds", "oddsio", "sgo"],
-  "cricket":   ["cricket", "entitycricket"],
-  "golf":      ["livegolf", "golfcourse"],
-  "free":      ["espn", "nhl", "mlb", "f1", "openf1", "openliga", "sportsdb", "ncaa", "sportsrc", "lichess", "chesscom", "squiggle"],
-  "chess":     ["lichess", "chesscom"],
-};
 
 function resolveProviders(): string[] {
   const env = process.env.SPORTS_HUB_PROVIDERS?.trim();
@@ -120,6 +115,10 @@ async function main() {
     version: VERSION,
   });
 
+  // Capture tool registrations so we can apply uniform read-only annotations
+  // + titles after all providers have registered (see shared/annotations.ts).
+  const applyAnnotations = captureToolAnnotations(server);
+
   // Load and register selected providers
   for (const name of selected) {
     const loader = PROVIDERS[name];
@@ -136,14 +135,23 @@ async function main() {
     }
   }
 
+  // All tools are read-only GETs — annotate them (readOnly/idempotent/openWorld)
+  // and give each a friendly title, in one place, using public SDK APIs.
+  applyAnnotations();
+
+  // Expose static catalogs as MCP resources and curated workflows as prompts.
+  registerResources(server);
+  registerPrompts(server);
+
   // Warn about tool bloat
   if (isAll) {
     console.error("");
-    console.error("  ⚠ All 29 providers loaded (319 tools).");
+    console.error(`  ⚠ All ${Object.keys(PROVIDERS).length} providers loaded (396 tools).`);
     console.error("    LLMs work best with fewer tools. Consider using a preset:");
-    console.error("    SPORTS_HUB_PROVIDERS=free       → 12 providers, ~109 tools (no keys needed)");
-    console.error("    SPORTS_HUB_PROVIDERS=us-major   → 7 providers, ~79 tools");
-    console.error("    SPORTS_HUB_PROVIDERS=soccer     → 6 providers, ~69 tools");
+    console.error("    SPORTS_HUB_PROVIDERS=free        → 19 providers, ~165 tools (no keys needed)");
+    console.error("    SPORTS_HUB_PROVIDERS=us-major    → 9 providers, ~93 tools");
+    console.error("    SPORTS_HUB_PROVIDERS=motorsport  → 5 providers, ~42 tools (no keys needed)");
+    console.error("    SPORTS_HUB_PROVIDERS=soccer      → 8 providers, ~73 tools");
     console.error("");
   }
 
@@ -193,8 +201,15 @@ async function main() {
 
     // CORS allowlist. Defaults to "no CORS" — only set
     // SPORTS_HUB_CORS_ORIGINS if you actually need browser clients.
-    const corsOrigins = (process.env.SPORTS_HUB_CORS_ORIGINS ?? "")
+    let corsOrigins = (process.env.SPORTS_HUB_CORS_ORIGINS ?? "")
       .split(",").map((s) => s.trim()).filter(Boolean);
+    if (corsOrigins.includes("*")) {
+      console.error(
+        "  ⚠ SPORTS_HUB_CORS_ORIGINS includes '*'. Wildcard CORS is not supported — " +
+        "list explicit origins (e.g. https://example.com). The '*' entry is ignored."
+      );
+      corsOrigins = corsOrigins.filter((o) => o !== "*");
+    }
 
     const httpServer = createServer((req, res) => {
       const origin = req.headers.origin;

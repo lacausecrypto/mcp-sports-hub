@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { fetchJson, buildUrl, toolResult, errorResult } from "../shared/http.js";
+import { fetchJson, buildUrl, pathSegment, toolResult, errorResult } from "../shared/http.js";
 
 // ---------------------------------------------------------------------------
 // SportsDataIO provider — 12 tools
@@ -176,16 +176,19 @@ export function register(server: McpServer): void {
     const config = SPORT_CONFIG[sport];
     let path = getEndpointPath(sport, action);
 
-    // Replace path parameters
+    // Replace path parameters. Encode each user-supplied value with
+    // pathSegment() so an id/season/date can't escape into adjacent path
+    // components or inject extra query params before the `?key=` delimiter.
     for (const [key, value] of Object.entries(params)) {
       if (key === "date") {
-        path = path.replace("{date}", formatDate(value, config.dateFormat));
+        path = path.replace("{date}", pathSegment(formatDate(value, config.dateFormat)));
       } else {
-        path = path.replace(`{${key}}`, value);
+        path = path.replace(`{${key}}`, pathSegment(value));
       }
     }
 
-    return `${config.baseUrl}/${path}?key=${API_KEY}`;
+    // Pass the key via buildUrl so it's properly encoded as a query param.
+    return buildUrl(`${config.baseUrl}/${path}`, { key: API_KEY });
   }
 
   async function apiRequest(sport: Sport, action: string, params: Record<string, string>) {

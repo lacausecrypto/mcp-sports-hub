@@ -1,14 +1,15 @@
 # Sports Hub MCP Server
 
-Unified MCP server — 32 providers, 336 tools, one process.
-Covers: NFL, NBA, MLB, NHL, Soccer, F1, Tennis, Cricket, MMA, Golf, Esports, Rugby, Volleyball, Handball, College Sports, Chess, AFL, and more.
+Unified MCP server — 41 providers, 396 tools, one process.
+Covers: NFL, NBA, EuroLeague, MLB, NHL, Soccer, F1, MotoGP, Formula E, NASCAR, Tennis, Cricket, MMA, Boxing, Golf, Esports, Rugby, Volleyball, Handball, College Sports, Chess, AFL, NFL fantasy, and more.
+Also exposes MCP **resources** (provider/preset catalogs at `sportshub://...`) and **prompts** (curated workflows like `whats-on-today`, `compare-odds`, `motorsport-weekend`).
 
 Works with any MCP client (Claude, ChatGPT, Gemini, Cursor, Windsurf, Continue, Cline, Zed).
 Uses stdio transport — compatible with any LLM supporting the Model Context Protocol.
 
 ## Provider Reference
 
-### No API key required (12 providers, ~109 tools)
+### No API key required (19 providers, ~165 tools)
 
 | Prefix | Provider | Coverage | Tools |
 |--------|----------|----------|-------|
@@ -24,11 +25,18 @@ Uses stdio transport — compatible with any LLM supporting the Model Context Pr
 | `lichess_` | Lichess | Chess (users, top players, broadcasts, tournaments, daily puzzle) | 7 |
 | `chesscom_` | Chess.com | Chess (profiles, stats, clubs, archives, leaderboards) | 7 |
 | `squiggle_` | Squiggle | AFL (Australian Football League): teams, games, ladder, tips, sources | 6 |
+| `motogp_` | MotoGP (unofficial) | MotoGP/Moto2/Moto3/MotoE: seasons, results, sessions, standings, riders | 7 |
+| `formulae_` | Formula E (unofficial) | Formula E: championships, races, results, teams, standings | 7 |
+| `nascar_` | NASCAR (unofficial) | NASCAR Cup/Xfinity/Truck: schedule, live feed, lap times | 3 |
+| `opendota_` | OpenDota | Dota 2: pro matches, match/player/hero analytics, teams, leagues | 11 |
+| `sleeper_` | Sleeper | NFL fantasy: player search, injuries, trending, leagues, rosters | 10 |
+| `euroleague_` | EuroLeague Basketball | EuroLeague + EuroCup: games, clubs, boxscores, play-by-play | 6 |
+| `footballdata_uk_` | Football-Data.co.uk | Historical football results + bookmaker odds (CSV, 25+ leagues) | 2 |
 
 `sportsdb_` defaults to test key "3" (free, watermarked images). Set `THESPORTSDB_API_KEY` for a personal key.
 `sportsrc_` V1 endpoints are free with no key. V2 (xG, momentum, lineups) needs `SPORTSRC_API_KEY` and is currently NOT exposed.
 
-### API key required (21 providers, ~227 tools)
+### API key required (22 providers, ~231 tools)
 
 | Prefix | Provider | Env var | Coverage | Tools | Free limit |
 |--------|----------|---------|----------|-------|------------|
@@ -52,6 +60,8 @@ Uses stdio transport — compatible with any LLM supporting the Model Context Pr
 | `pandascore_` | PandaScore | `PANDASCORE_TOKEN` | Esports 13 titles (LoL, CS2, Dota2...) | 14 | 1000/hr |
 | `golfcourse_` | GolfCourseAPI | `GOLFCOURSE_API_KEY` | 30K+ golf courses worldwide | 6 | 300/day |
 | `cfbd_` | College Football Data | `CFBD_API_KEY` | NCAA football (games, stats, recruiting) | 14 | 1000/mo |
+| `boxing_` | Boxing Data API | `BOXING_DATA_API_KEY` | Pro boxing (fighters, bouts, events, titles) — via RapidAPI | 8 | 100/mo |
+| `highlightly_` | Highlightly | `HIGHLIGHTLY_API_KEY` | Multi-sport video highlights, odds, standings, predictions | 6 | 100/day |
 
 ## Choosing the right tool
 
@@ -61,8 +71,14 @@ Uses stdio transport — compatible with any LLM supporting the Model Context Pr
 **Game details**: `mlb_get_game_boxscore`, `nhl_get_game_boxscore`, `espn_get_event_summary`
 **Soccer fixtures**: `apifootball_get_fixtures` (960+ leagues), `footballdata_get_matches` (12 top leagues), `sportsrc_get_matches`
 **F1 data**: `f1_get_race_results` (historical 1950+), `openf1_get_laps` (live telemetry)
-**Betting odds**: `odds_get_odds`, `oddsio_get_odds`, `sgo_get_odds`
-**Esports**: `pandascore_get_matches`, `pandascore_get_lives` (LoL, CS2, Dota2, Valorant, etc.)
+**Motorsport (beyond F1)**: `motogp_get_standings`, `formulae_get_driver_standings`, `nascar_get_schedule`, `nascar_get_live`
+**Betting odds (live)**: `odds_get_odds`, `oddsio_get_odds`, `sgo_get_odds`, `highlightly_get_odds`
+**Betting odds (historical, for backtesting)**: `footballdata_uk_get_matches` (results + closing odds, 2000-now)
+**Basketball (beyond NBA)**: `euroleague_get_games`, `euroleague_get_game_boxscore` (EuroLeague + EuroCup), `bdl_get_*` (NBA)
+**Boxing**: `boxing_get_fighters`, `boxing_get_bouts`, `boxing_get_events` (distinct from MMA)
+**Video highlights**: `highlightly_get_highlights` (multi-sport clips)
+**Esports**: `pandascore_get_matches`, `pandascore_get_lives` (LoL, CS2, Valorant), `opendota_get_pro_matches`, `opendota_get_match` (deep Dota 2 analytics)
+**NFL fantasy**: `sleeper_search_players` (injuries/depth charts), `sleeper_get_trending_players`, `sleeper_get_league_matchups`
 **Cricket**: `cricket_get_current_matches`, `entitycricket_get_matches`
 **Golf**: `livegolf_get_leaderboard`, `golfcourse_search_courses`
 **MMA**: `mma_search_fighters`, `mma_get_fighter_fights`
@@ -88,6 +104,13 @@ Providers without published limits (ESPN, NHL, MLB, F1, OpenF1, OpenLigaDB, Golf
 ## Caveats
 
 - **ESPN** (`espn_`): Unofficial API — can break without notice.
+- **MotoGP / Formula E / NASCAR** (`motogp_`, `formulae_`, `nascar_`): Unofficial/undocumented vendor backends — can change without notice (same risk class as ESPN). MotoGP/Formula E results use chained UUID lookups; Formula E standings need a `championshipId`.
+- **Sleeper** (`sleeper_`): NFL only for player data; the player DB is large (cached 24h) — use `sleeper_search_players`, never expect a full dump. ~1000 req/min cap.
+- **OpenDota** (`opendota_`): Keyless free tier ~60 req/min, 50k/mo. `opendota_search_players` is a slow DB query (20-30s).
+- **EuroLeague** (`euroleague_`): Keyless official feeds (JSON). Use competition `E` (EuroLeague) or `U` (EuroCup) + season start year. v1 XML feeds are not wrapped (JSON-only).
+- **Football-Data.co.uk** (`footballdata_uk_`): CSV parsed to JSON; historical (updated within days of each round), not live. Cryptic column codes — see https://www.football-data.co.uk/notes.txt.
+- **Boxing** (`boxing_`): Via RapidAPI; free Basic plan is only **100 requests/month** — use sparingly.
+- **Highlightly** (`highlightly_`): Free Basic = 100 req/day. `sport` is part of the path (e.g. "football" = soccer). Standings need leagueId + season.
 - **TheSportsDB** (`sportsdb_`): Test key "3" = watermarked images. $1/mo Patreon for clean images.
 - **SportsDataIO** (`sportsdata_`): Free tier data is partially randomized/scrambled.
 - **Sportmonks** (`sportmonks_`): Free = only Danish Superliga + Scottish Premiership.
@@ -96,28 +119,33 @@ Providers without published limits (ESPN, NHL, MLB, F1, OpenF1, OpenLigaDB, Golf
 
 ## Provider Filtering
 
-By default, ALL 32 providers (336 tools) are loaded. This can overwhelm LLMs.
+By default, only the `free` preset is loaded (19 providers, ~165 tools — no API keys needed).
+Set `SPORTS_HUB_PROVIDERS=all` for all 41 providers (396 tools), but that many tools can overwhelm LLMs.
 Use `SPORTS_HUB_PROVIDERS` to control which providers are active.
 
 ### Presets (recommended)
 
 | Preset | Providers loaded | Use case |
 |--------|-----------------|----------|
-| `us-major` | espn, nhl, mlb, ncaa, cfbd, bdl, msf | US sports fans |
-| `soccer` | espn, apifootball, footballdata, sportmonks, openliga, sportsrc | Football/soccer |
+| `us-major` | espn, nhl, mlb, ncaa, cfbd, bdl, msf, nascar, sleeper | US sports fans |
+| `soccer` | espn, apifootball, footballdata, sportmonks, openliga, sportsrc, footballdatauk, highlightly | Football/soccer |
 | `f1` | f1, openf1 | Formula 1 |
-| `esports` | pandascore | LoL, CS2, Dota 2, Valorant... |
+| `motorsport` | f1, openf1, motogp, formulae, nascar | F1, MotoGP, Formula E, NASCAR |
+| `esports` | pandascore, opendota | LoL, CS2, Dota 2 (+ deep Dota analytics)... |
 | `odds` | odds, oddsio, sgo | Betting odds |
 | `cricket` | cricket, entitycricket | Cricket |
 | `golf` | livegolf, golfcourse | Golf |
 | `chess` | lichess, chesscom | Chess (Lichess + Chess.com) |
-| `free` | espn, nhl, mlb, f1, openf1, openliga, sportsdb, ncaa, sportsrc, lichess, chesscom, squiggle | All no-key providers (12) |
+| `free` | espn, nhl, mlb, f1, openf1, openliga, sportsdb, ncaa, sportsrc, lichess, chesscom, squiggle, motogp, formulae, nascar, opendota, sleeper, euroleague, footballdatauk | All no-key providers (19) |
 
 ### Usage
 
 ```bash
-# All 336 tools (default)
+# Default — free preset, 19 no-key providers, ~165 tools
 node dist/index.js
+
+# All 41 providers (396 tools)
+SPORTS_HUB_PROVIDERS=all node dist/index.js
 
 # Preset — recommended for most users
 SPORTS_HUB_PROVIDERS=us-major node dist/index.js
@@ -151,9 +179,9 @@ In Claude Desktop config:
 ### Why filter?
 
 LLMs work best with fewer, focused tools. Recommendations:
-- **General use**: `free` preset (9 providers, ~98 tools)
+- **General use**: `free` preset (19 providers, ~165 tools)
 - **Specific sport**: use the sport preset (`f1`, `soccer`, `esports`, etc.)
-- **Full access**: `SPORTS_HUB_PROVIDERS=all` (319 tools — works but slower tool selection)
+- **Full access**: `SPORTS_HUB_PROVIDERS=all` (396 tools — works but slower tool selection)
 
 ## Transport
 

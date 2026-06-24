@@ -59,7 +59,7 @@ const transport = new StdioServerTransport();
 await server.connect(transport);
 ```
 
-This means all 205 tools are registered on a single MCP server and exposed over a single stdio connection.
+This means all 396 tools are registered on a single MCP server and exposed over a single stdio connection.
 
 ### Tool Registration
 
@@ -125,14 +125,14 @@ All tools use the pattern `{provider}_{action}` (e.g., `espn_get_scoreboard`, `n
 API keys are checked inside each tool handler, not at module import time or during registration. This means:
 
 - The server always starts successfully, regardless of which keys are configured.
-- All 205 tools are always registered and visible to the client.
+- All 396 tools are always registered and visible to the client.
 - Calling a tool without its required key returns a clear error like `"API_FOOTBALL_KEY env var is required"`.
 
 This is intentional. It allows users to configure keys incrementally and discover what is available before committing to registration on every API.
 
 ### Single Server, Stdio Transport
 
-All providers run in a single process on a single stdio transport. This keeps configuration simple (one entry in Claude Desktop config) and avoids the overhead of managing multiple server processes. The tradeoff is that all 205 tools appear in the tool list, but the prefixed naming makes them easy to filter.
+All providers run in a single process on a single stdio transport. This keeps configuration simple (one entry in Claude Desktop config) and avoids the overhead of managing multiple server processes. The tradeoff is that all 396 tools appear in the tool list, but the prefixed naming makes them easy to filter.
 
 ### No Caching Layer
 

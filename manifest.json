@@ -1,0 +1,66 @@
+{
+  "manifest_version": "0.2",
+  "name": "sports-hub",
+  "display_name": "Sports Hub",
+  "version": "1.3.0",
+  "description": "41 sports API providers, 396 tools — scores, stats, odds, esports, chess, motorsport, boxing, AFL and more, in one MCP server.",
+  "long_description": "Sports Hub aggregates 41 independent sports data APIs behind a single MCP server. By default it loads the `free` preset (19 no-key providers, ~165 tools) so it works with zero configuration. Set `SPORTS_HUB_PROVIDERS` to a preset (free, us-major, soccer, f1, motorsport, esports, odds, cricket, golf, chess) or `all`, and add API keys only for the providers you need.",
+  "author": {
+    "name": "lacausecrypto",
+    "url": "https://github.com/lacausecrypto"
+  },
+  "homepage": "https://github.com/lacausecrypto/mcp-sports-hub",
+  "documentation": "https://github.com/lacausecrypto/mcp-sports-hub#readme",
+  "support": "https://github.com/lacausecrypto/mcp-sports-hub/issues",
+  "license": "MIT",
+  "keywords": ["sports", "scores", "stats", "odds", "esports", "f1", "motorsport", "nfl", "nba", "mlb", "nhl", "soccer", "chess"],
+  "server": {
+    "type": "node",
+    "entry_point": "dist/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/dist/index.js"],
+      "env": {
+        "SPORTS_HUB_PROVIDERS": "${user_config.providers}",
+        "THE_ODDS_API_KEY": "${user_config.the_odds_api_key}",
+        "API_FOOTBALL_KEY": "${user_config.api_football_key}",
+        "PANDASCORE_TOKEN": "${user_config.pandascore_token}"
+      }
+    }
+  },
+  "user_config": {
+    "providers": {
+      "type": "string",
+      "title": "Providers / preset",
+      "description": "Comma-separated providers or a preset (free, us-major, soccer, f1, motorsport, esports, odds, cricket, golf, chess, all). Leave as 'free' for no-key providers only.",
+      "default": "free",
+      "required": false
+    },
+    "the_odds_api_key": {
+      "type": "string",
+      "title": "The Odds API key (optional)",
+      "description": "Free key from the-odds-api.com — enables the `odds_` tools.",
+      "sensitive": true,
+      "required": false
+    },
+    "api_football_key": {
+      "type": "string",
+      "title": "API-Football key (optional)",
+      "description": "Free key from api-football.com — enables the `apifootball_` tools.",
+      "sensitive": true,
+      "required": false
+    },
+    "pandascore_token": {
+      "type": "string",
+      "title": "PandaScore token (optional)",
+      "description": "Free token from pandascore.co — enables the `pandascore_` esports tools.",
+      "sensitive": true,
+      "required": false
+    }
+  },
+  "compatibility": {
+    "runtimes": {
+      "node": ">=18.0.0"
+    }
+  }
+}
