@@ -1,0 +1,33 @@
+# Files excluded from the .mcpb bundle (built via `npm run bundle`).
+# The bundle ships only what the server needs at runtime: manifest.json,
+# dist/, production node_modules, README, LICENSE.
+#
+# Pack with production-only deps for a lean bundle:
+#   npm ci --omit=dev && npm run bundle && npm ci
+
+# Source & build inputs (dist/ is shipped, src/ is not)
+src/
+*.ts
+!*.d.ts
+*.tsbuildinfo
+tsconfig.json
+
+# Repo tooling & docs (not needed at runtime)
+.github/
+docs/
+video/
+*.test.mjs
+CHANGELOG.md
+server.json
+package-lock.json
+.gitignore
+.npmrc
+.mcpbignore
+
+# Secrets / local
+.env
+.env.*
+.mcpregistry_*
+
+# Prior bundles
+*.mcpb
