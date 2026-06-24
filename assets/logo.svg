@@ -1,0 +1,64 @@
+<svg width="400" height="400" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#262638"/>
+      <stop offset="1" stop-color="#16161f"/>
+    </linearGradient>
+    <linearGradient id="bolt" x1="0.2" y1="0" x2="0.8" y2="1">
+      <stop offset="0" stop-color="#f1e9ff"/>
+      <stop offset="0.45" stop-color="#a78bfa"/>
+      <stop offset="1" stop-color="#7cc4fb"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#8b5cf6" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#8b5cf6" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="boltglow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#a78bfa" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#a78bfa" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="soft" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="9"/>
+    </filter>
+  </defs>
+
+  <rect x="0" y="0" width="400" height="400" rx="92" fill="url(#tile)"/>
+  <rect x="3" y="3" width="394" height="394" rx="89" fill="none" stroke="#3a3a55" stroke-opacity="0.6" stroke-width="2"/>
+
+  <circle cx="200" cy="200" r="150" fill="url(#glow)"/>
+
+  <circle cx="200" cy="200" r="128" fill="none" stroke="#8b5cf6" stroke-opacity="0.45" stroke-width="3"/>
+
+  <g stroke="#6c6f93" stroke-opacity="0.5" stroke-width="2">
+    <line x1="200" y1="200" x2="200" y2="72"/>
+    <line x1="200" y1="200" x2="290.5" y2="109.5"/>
+    <line x1="200" y1="200" x2="328" y2="200"/>
+    <line x1="200" y1="200" x2="290.5" y2="290.5"/>
+    <line x1="200" y1="200" x2="200" y2="328"/>
+    <line x1="200" y1="200" x2="109.5" y2="290.5"/>
+    <line x1="200" y1="200" x2="72" y2="200"/>
+    <line x1="200" y1="200" x2="109.5" y2="109.5"/>
+  </g>
+  <g fill="#b4befe">
+    <circle cx="200" cy="72" r="9"/>
+    <circle cx="290.5" cy="109.5" r="9"/>
+    <circle cx="328" cy="200" r="9"/>
+    <circle cx="290.5" cy="290.5" r="9"/>
+    <circle cx="200" cy="328" r="9"/>
+    <circle cx="109.5" cy="290.5" r="9"/>
+    <circle cx="72" cy="200" r="9"/>
+    <circle cx="109.5" cy="109.5" r="9"/>
+  </g>
+
+  <circle cx="200" cy="200" r="80" fill="#141420"/>
+  <circle cx="200" cy="200" r="80" fill="none" stroke="#8b5cf6" stroke-opacity="0.75" stroke-width="3"/>
+
+  <!-- luminous halo behind the bolt -->
+  <circle cx="200" cy="200" r="62" fill="url(#boltglow)"/>
+  <!-- soft blurred copy for glow -->
+  <g filter="url(#soft)" opacity="0.85">
+    <path d="M216.1 121.8 L142.5 216.1 H190.8 L183.9 278.2 L257.5 183.9 H209.2 Z" fill="url(#bolt)"/>
+  </g>
+  <!-- crisp bolt -->
+  <path d="M216.1 121.8 L142.5 216.1 H190.8 L183.9 278.2 L257.5 183.9 H209.2 Z" fill="url(#bolt)"/>
+</svg>

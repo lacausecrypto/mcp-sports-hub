@@ -1,4 +1,8 @@
-# Sports Hub MCP Server
+<p align="center">
+  <img src="assets/logo.png" alt="Sports Hub" width="128" height="128">
+</p>
+
+<h1 align="center">Sports Hub MCP Server</h1>
 
 <p align="center">
   <a href="https://www.npmjs.com/package/mcp-sports-hub"><img src="https://img.shields.io/npm/v/mcp-sports-hub?color=CB3837&logo=npm&logoColor=white" alt="npm version"></a>
