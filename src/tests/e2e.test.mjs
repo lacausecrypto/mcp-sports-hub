@@ -159,6 +159,9 @@ const TEST_CASES = {
   "sports-game-odds.js": [
     { tool: "sgo_get_leagues", args: {}, envs: ["SPORTS_GAME_ODDS_KEY"] },
   ],
+  "lumify.js": [
+    { tool: "lumify_get_sports", args: {}, envs: ["LUMIFY_API_KEY"] },
+  ],
   "fighting-tomatoes.js": [
     { tool: "mma_get_organizations", args: {}, envs: ["FIGHTING_TOMATOES_API_KEY"] },
   ],
