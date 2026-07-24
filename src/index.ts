@@ -49,6 +49,7 @@ const PROVIDERS: Record<string, () => Promise<{ register: (s: McpServer) => void
   odds:           () => import("./providers/the-odds-api.js"),
   oddsio:         () => import("./providers/odds-api-io.js"),
   sgo:            () => import("./providers/sports-game-odds.js"),
+  lumify:         () => import("./providers/lumify.js"),
   mma:            () => import("./providers/fighting-tomatoes.js"),
   livegolf:       () => import("./providers/live-golf.js"),
   isports:        () => import("./providers/isportsapi.js"),
