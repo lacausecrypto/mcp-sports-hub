@@ -182,9 +182,19 @@ SPORTS_HUB_HTTP=1 SPORTS_HUB_PORT=3000 npx mcp-sports-hub
 
 Endpoints:
 - `POST /mcp` — MCP protocol (Streamable HTTP with SSE)
-- `GET /health` — Health check (`{"status":"ok","providers":19}`)
+- `GET /health` — Health check (`{"status":"ok","providers":19,"sessions":0,"mode":"session"}`)
 
-Supports CORS, session management via `mcp-session-id` header. Default port: 3000.
+Supports CORS and multi-client session management via the `mcp-session-id` header. Default port: 3000.
+
+Each client gets its own session, created on `initialize` and addressed afterwards by its session id. Building a session costs ~90 ms for the 165-tool `free` preset, paid once per client rather than per request. Idle sessions are reaped.
+
+```bash
+SPORTS_HUB_MAX_SESSIONS=200   # concurrent sessions before new ones get a 503
+SPORTS_HUB_SESSION_TTL=1800   # seconds a session may sit idle
+SPORTS_HUB_STATELESS=1        # opt out: build a throwaway server per request
+```
+
+`SPORTS_HUB_STATELESS=1` suits several replicas behind a load balancer with no sticky routing. It pays the build cost on every call, so prefer sessions for a single instance.
 
 > **⚠ Security**: HTTP mode binds to `127.0.0.1` (loopback) by default. Setting `SPORTS_HUB_HOST=0.0.0.0` exposes an **unauthenticated** MCP endpoint to your whole network — anyone who can reach it can use your configured API keys. DNS-rebinding protection only blocks browser-origin attacks, not direct clients. Only expose it behind a reverse proxy with auth/TLS. `SPORTS_HUB_CORS_ORIGINS` must list explicit origins (a literal `*` is rejected).
 
@@ -243,6 +253,29 @@ $env:PANDASCORE_TOKEN = "your-token"
 ```cmd
 set API_SPORTS_KEY=your-key
 set PANDASCORE_TOKEN=your-token
+```
+
+### Response size and the `fields` parameter
+
+Sports APIs return very wide objects, and every byte a tool returns is spent from the model's context window. A single `espn_get_scoreboard`-style team listing is ~300 KB of JSON, of which the part anyone wants is under 3 KB.
+
+**Every tool accepts an optional `fields` parameter**: a comma-separated list of key names to keep, matched at any depth. Branches that match nothing are dropped, and a matched key keeps its whole value.
+
+```jsonc
+// espn_get_teams { "sport": "basketball", "league": "nba" }
+//   -> 297 KB
+
+// espn_get_teams { "sport": "basketball", "league": "nba",
+//                  "fields": "id,abbreviation,displayName,location" }
+//   -> 2.9 KB, same 30 teams
+```
+
+If `fields` matches nothing, the tool says so and lists the top-level keys it did see, rather than returning an empty object.
+
+Responses are also capped. Above the limit, the longest lists in the payload are shortened until it fits (so the JSON still parses) and a note reports how many items were dropped.
+
+```bash
+SPORTS_HUB_MAX_RESULT_BYTES=40000   # default; serialized bytes per tool result
 ```
 
 ### Claude Desktop
@@ -338,6 +371,17 @@ All GET responses are cached in memory for 60 seconds by default. This protects 
 SPORTS_HUB_CACHE_TTL=120  # seconds (0 to disable)
 ```
 
+The cache key includes a digest of the request's auth headers, so two API keys never read each other's entries. Concurrent identical requests are collapsed into a single upstream call, and a `404`/`410` is remembered briefly (`SPORTS_HUB_NEGATIVE_CACHE_TTL`, default 30s) so a wrong ID can't be re-fetched in a loop.
+
+### Rate limits and retries
+
+`429` and `5xx` responses are retried with exponential backoff, honouring `Retry-After` when the upstream sends one. Client errors (`4xx` other than 408/425/429) and timeouts are not retried.
+
+```bash
+SPORTS_HUB_MAX_RETRIES=2        # extra attempts after the first (0 disables)
+SPORTS_HUB_RETRY_BASE_MS=300    # backoff base; doubles per attempt
+```
+
 In Claude Desktop config:
 ```json
 "env": {
@@ -380,11 +424,15 @@ All tools are annotated `readOnly` / `idempotent` so clients can skip confirmati
 
 ```
 src/
-├── index.ts                    # Imports + registers all 41 providers
+├── index.ts                    # Imports + registers all 41 providers; transports
 ├── shared/
 │   ├── http.ts                 # fetchJson, fetchText, buildUrl, toolResult, errorResult
+│   │                           #   + retry/backoff, coalescing, keyed cache
 │   ├── catalog.ts              # provider catalog + presets (single source of truth)
 │   ├── annotations.ts          # central read-only annotations + titles
+│   ├── tool-pipeline.ts        # central `fields` param, size cap, empty-result hints
+│   ├── projection.ts           # field projection used by the pipeline
+│   ├── slim.ts                 # strips $schema boilerplate from tools/list
 │   ├── resources.ts            # MCP resources (provider/preset catalogs)
 │   └── prompts.ts              # MCP prompts (curated workflows)
 └── providers/

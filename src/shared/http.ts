@@ -2,6 +2,7 @@
  * Shared HTTP utilities for all providers.
  */
 
+import { createHash } from "node:crypto";
 import { USER_AGENT } from "./version.js";
 
 export interface HttpOptions {
@@ -28,12 +29,35 @@ interface CacheEntry {
   expiresAt: number;
 }
 
+interface NegativeEntry {
+  message: string;
+  expiresAt: number;
+}
+
 const DEFAULT_CACHE_TTL = clampInt(process.env.SPORTS_HUB_CACHE_TTL, 60, 0, 86_400);
 const MAX_CACHE_ENTRIES = clampInt(process.env.SPORTS_HUB_CACHE_MAX, 500, 1, 100_000);
 const DEFAULT_TIMEOUT_MS = clampInt(process.env.SPORTS_HUB_HTTP_TIMEOUT_MS, 15_000, 1_000, 600_000);
+/** How long a 404/410 is remembered, so a wrong ID doesn't re-hit upstream in a loop. */
+const NEGATIVE_CACHE_TTL = clampInt(process.env.SPORTS_HUB_NEGATIVE_CACHE_TTL, 30, 0, 3_600);
+/** Extra attempts after the first on 429/5xx. 0 disables retrying. */
+const MAX_RETRIES = clampInt(process.env.SPORTS_HUB_MAX_RETRIES, 2, 0, 5);
+const RETRY_BASE_MS = clampInt(process.env.SPORTS_HUB_RETRY_BASE_MS, 300, 10, 10_000);
+/** Longest Retry-After we are willing to sit on before giving up. */
+const MAX_RETRY_AFTER_MS = 10_000;
+
+/** Serialized tool payloads larger than this are truncated before reaching the model. */
+export const MAX_RESULT_BYTES = clampInt(
+  process.env.SPORTS_HUB_MAX_RESULT_BYTES,
+  40_000,
+  1_000,
+  10_000_000,
+);
 
 // Map preserves insertion order — re-inserting on read gives us LRU semantics.
 const cache = new Map<string, CacheEntry>();
+const negativeCache = new Map<string, NegativeEntry>();
+/** Requests currently in flight, keyed like the cache: collapses duplicate concurrent calls. */
+const inFlight = new Map<string, Promise<unknown>>();
 
 function clampInt(raw: string | undefined, fallback: number, min: number, max: number): number {
   if (raw === undefined) return fallback;
@@ -65,38 +89,148 @@ function setCache(key: string, data: unknown, ttl: number): void {
   }
 }
 
+function getNegative(key: string): string | undefined {
+  const entry = negativeCache.get(key);
+  if (!entry) return undefined;
+  if (Date.now() > entry.expiresAt) {
+    negativeCache.delete(key);
+    return undefined;
+  }
+  return entry.message;
+}
+
+function setNegative(key: string, message: string): void {
+  if (NEGATIVE_CACHE_TTL <= 0) return;
+  negativeCache.set(key, { message, expiresAt: Date.now() + NEGATIVE_CACHE_TTL * 1000 });
+  while (negativeCache.size > MAX_CACHE_ENTRIES) {
+    const oldest = negativeCache.keys().next().value;
+    if (oldest === undefined) break;
+    negativeCache.delete(oldest);
+  }
+}
+
+/**
+ * Cache identity for a request.
+ *
+ * The auth headers are part of the key. Two callers hitting the same URL with
+ * different API keys can legitimately get different responses (entitlements,
+ * per-plan fields), so a URL-only key would serve one account's data to
+ * another in any process handling more than one key. Only a digest of the
+ * header values is kept, never the values themselves.
+ */
+function cacheKeyFor(prefix: string, method: string, url: string, headers?: Record<string, string>): string {
+  const auth = headers
+    ? Object.entries(headers)
+        .filter(([k]) => !/^(accept|user-agent|content-type)$/i.test(k))
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([k, v]) => `${k.toLowerCase()}=${v}`)
+        .join("&")
+    : "";
+  const suffix = auth ? `:${createHash("sha256").update(auth).digest("hex").slice(0, 16)}` : "";
+  return `${prefix}${method}:${url}${suffix}`;
+}
+
 /** Test/diagnostic helper. Not exported in the README API. */
-export function _cacheStatsForTests(): { size: number; max: number } {
-  return { size: cache.size, max: MAX_CACHE_ENTRIES };
+export function _cacheStatsForTests(): { size: number; max: number; negative: number; inFlight: number } {
+  return { size: cache.size, max: MAX_CACHE_ENTRIES, negative: negativeCache.size, inFlight: inFlight.size };
 }
 
 // ---------------------------------------------------------------------------
 // HTTP
 // ---------------------------------------------------------------------------
 
+const RETRYABLE_STATUS = new Set([408, 425, 429, 500, 502, 503, 504]);
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Parse Retry-After (delta-seconds or HTTP-date) into ms, or undefined. */
+function retryAfterMs(header: string | null): number | undefined {
+  if (!header) return undefined;
+  const seconds = Number(header);
+  if (Number.isFinite(seconds)) return Math.max(0, seconds * 1000);
+  const at = Date.parse(header);
+  if (Number.isNaN(at)) return undefined;
+  return Math.max(0, at - Date.now());
+}
+
+/** Error carrying the upstream status, so callers can special-case 404 vs 429. */
+export class HttpError extends Error {
+  constructor(readonly status: number, message: string) {
+    super(message);
+    this.name = "HttpError";
+  }
+}
+
 async function rawFetch(url: string, options: HttpOptions): Promise<Response> {
   const { headers = {}, method = "GET", timeoutMs = DEFAULT_TIMEOUT_MS } = options;
-  const response = await fetch(url, {
-    method,
-    headers: {
-      Accept: "application/json",
-      "User-Agent": USER_AGENT,
-      ...headers,
-    },
-    signal: AbortSignal.timeout(timeoutMs),
-  });
-  if (!response.ok) {
+
+  for (let attempt = 0; ; attempt++) {
+    const response = await fetch(url, {
+      method,
+      headers: {
+        Accept: "application/json",
+        "User-Agent": USER_AGENT,
+        ...headers,
+      },
+      // A timed-out request is not retried: three 15s waits is worse for the
+      // caller than one honest failure.
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+
+    if (response.ok) return response;
+
+    const shouldRetry = attempt < MAX_RETRIES && RETRYABLE_STATUS.has(response.status);
+    if (shouldRetry) {
+      const advised = retryAfterMs(response.headers.get("retry-after"));
+      if (advised === undefined || advised <= MAX_RETRY_AFTER_MS) {
+        const backoff = RETRY_BASE_MS * 2 ** attempt + Math.floor(Math.random() * RETRY_BASE_MS);
+        await response.body?.cancel().catch(() => {});
+        await sleep(advised ?? backoff);
+        continue;
+      }
+    }
+
     const body = await response.text().catch(() => "");
-    throw new Error(
+    throw new HttpError(
+      response.status,
       `HTTP ${response.status} ${response.statusText}${body ? `: ${body.slice(0, 500)}` : ""}`,
     );
   }
-  return response;
+}
+
+/**
+ * Run `work`, collapsing concurrent callers on the same key onto one upstream
+ * request and remembering 404/410 briefly so a wrong ID can't be re-fetched in
+ * a loop.
+ */
+async function withCoalescing<T>(key: string, work: () => Promise<T>): Promise<T> {
+  const negative = getNegative(key);
+  if (negative !== undefined) throw new HttpError(404, negative);
+
+  const existing = inFlight.get(key);
+  if (existing) return existing as Promise<T>;
+
+  const promise = work()
+    .catch((err: unknown) => {
+      if (err instanceof HttpError && (err.status === 404 || err.status === 410)) {
+        setNegative(key, err.message);
+      }
+      throw err;
+    })
+    .finally(() => {
+      inFlight.delete(key);
+    });
+
+  inFlight.set(key, promise as Promise<unknown>);
+  return promise;
 }
 
 /**
  * Fetch JSON from a URL with standard error handling and optional caching.
- * Cache is keyed on URL + method. Set cacheTtl (seconds) or env SPORTS_HUB_CACHE_TTL (default 60).
+ * Cache is keyed on URL + method + auth headers. Set cacheTtl (seconds) or env
+ * SPORTS_HUB_CACHE_TTL (default 60).
  */
 export async function fetchJson(
   url: string,
@@ -105,16 +239,18 @@ export async function fetchJson(
   const method = options.method ?? "GET";
   const ttl = options.cacheTtl ?? (method === "GET" ? DEFAULT_CACHE_TTL : 0);
 
-  const cacheKey = `${method}:${url}`;
+  const cacheKey = cacheKeyFor("", method, url, options.headers);
   if (ttl > 0) {
     const cached = getCached(cacheKey);
     if (cached !== undefined) return cached;
   }
 
-  const response = await rawFetch(url, options);
-  const data = await response.json();
-  if (ttl > 0) setCache(cacheKey, data, ttl);
-  return data;
+  return withCoalescing(cacheKey, async () => {
+    const response = await rawFetch(url, options);
+    const data = await response.json();
+    if (ttl > 0) setCache(cacheKey, data, ttl);
+    return data;
+  });
 }
 
 /**
@@ -143,21 +279,22 @@ export async function fetchNdjson(
 ): Promise<unknown[]> {
   const method = options.method ?? "GET";
   const ttl = options.cacheTtl ?? (method === "GET" ? DEFAULT_CACHE_TTL : 0);
-  const cacheKey = `NDJSON:${method}:${url}`;
+  const headers = { Accept: "application/x-ndjson", ...(options.headers ?? {}) };
+  const cacheKey = cacheKeyFor("NDJSON:", method, url, options.headers);
 
   if (ttl > 0) {
     const cached = getCached(cacheKey);
     if (cached !== undefined) return cached as unknown[];
   }
 
-  const headers = { Accept: "application/x-ndjson", ...(options.headers ?? {}) };
-  const response = await rawFetch(url, { ...options, headers });
-  const text = await response.text();
-  const lines = text.split("\n").filter((l) => l.trim() !== "");
-  const data: unknown[] = lines.map((line) => JSON.parse(line));
-
-  if (ttl > 0) setCache(cacheKey, data, ttl);
-  return data;
+  return withCoalescing(cacheKey, async () => {
+    const response = await rawFetch(url, { ...options, headers });
+    const text = await response.text();
+    const lines = text.split("\n").filter((l) => l.trim() !== "");
+    const data: unknown[] = lines.map((line) => JSON.parse(line));
+    if (ttl > 0) setCache(cacheKey, data, ttl);
+    return data;
+  });
 }
 
 /**
@@ -170,19 +307,20 @@ export async function fetchText(
 ): Promise<string> {
   const method = options.method ?? "GET";
   const ttl = options.cacheTtl ?? (method === "GET" ? DEFAULT_CACHE_TTL : 0);
-  const cacheKey = `TEXT:${method}:${url}`;
+  const headers = { Accept: "text/csv, text/plain, */*", ...(options.headers ?? {}) };
+  const cacheKey = cacheKeyFor("TEXT:", method, url, options.headers);
 
   if (ttl > 0) {
     const cached = getCached(cacheKey);
     if (cached !== undefined) return cached as string;
   }
 
-  const headers = { Accept: "text/csv, text/plain, */*", ...(options.headers ?? {}) };
-  const response = await rawFetch(url, { ...options, headers });
-  const text = await response.text();
-
-  if (ttl > 0) setCache(cacheKey, text, ttl);
-  return text;
+  return withCoalescing(cacheKey, async () => {
+    const response = await rawFetch(url, { ...options, headers });
+    const text = await response.text();
+    if (ttl > 0) setCache(cacheKey, text, ttl);
+    return text;
+  });
 }
 
 /**
@@ -214,10 +352,22 @@ export function pathSegment(value: string | number): string {
 /**
  * Standard tool result helpers.
  */
+
+/**
+ * The un-serialized payload, hung off the result so the central tool pipeline
+ * (shared/annotations.ts) can project fields without re-parsing the JSON it
+ * just produced. Non-enumerable, so it never reaches the wire.
+ */
+export const RAW_PAYLOAD = Symbol.for("sports-hub.rawPayload");
+
 export function toolResult(data: unknown) {
-  return {
-    content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }],
+  // Compact, not pretty-printed: indentation is 56% of the bytes on a payload
+  // like ESPN's team list and buys the model nothing.
+  const result = {
+    content: [{ type: "text" as const, text: JSON.stringify(data) }],
   };
+  Object.defineProperty(result, RAW_PAYLOAD, { value: data, enumerable: false });
+  return result;
 }
 
 export function errorResult(message: string) {
