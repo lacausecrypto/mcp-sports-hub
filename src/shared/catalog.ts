@@ -78,3 +78,66 @@ export const PRESETS: Record<string, string[]> = {
   "free":       ["espn", "nhl", "mlb", "f1", "openf1", "openliga", "sportsdb", "ncaa", "sportsrc", "lichess", "chesscom", "squiggle", "motogp", "formulae", "nascar", "opendota", "sleeper", "euroleague", "footballdatauk"],
   "chess":      ["lichess", "chesscom"],
 };
+
+// ---------------------------------------------------------------------------
+// Provider filtering
+// ---------------------------------------------------------------------------
+// SPORTS_HUB_PROVIDERS controls which providers to load.
+//
+//   Not set / empty    → load "free" preset (19 providers, ~165 tools)
+//   "all"              → load ALL 41 providers (396 tools)
+//   "espn,nhl,mlb"     → load only these 3 (36 tools)
+//   "-odds,-oddsio"    → load all EXCEPT these (prefix with -)
+//   "soccer,odds"      → combine presets and providers
+//   "free,-espn"       → a preset minus one provider
+// ---------------------------------------------------------------------------
+
+/**
+ * Resolve SPORTS_HUB_PROVIDERS into the ordered list of providers to register.
+ *
+ * `providerKeys` is the live registry from index.ts (rather than PROVIDER_CATALOG)
+ * so a name listed here but not actually registered can never be selected.
+ *
+ * Names expand in the order given — provider names take priority over preset
+ * names — and are then filtered: unknown names are dropped, exclusions are
+ * removed, and repeats collapse to their first occurrence. Presets overlap
+ * ("us-major" and "soccer" both contain espn), and registering a provider
+ * twice throws on the duplicate tool name.
+ */
+export function resolveProviders(env: string | undefined, providerKeys: string[]): string[] {
+  const raw = env?.trim();
+  if (!raw) return PRESETS["free"]; // Default to free providers only
+  if (raw === "all") return providerKeys;
+
+  // Check for preset
+  if (PRESETS[raw]) return PRESETS[raw];
+
+  const parts = raw.split(",").map((s) => s.trim()).filter(Boolean);
+  const excludes = new Set(parts.filter((p) => p.startsWith("-")).map((p) => p.slice(1)));
+  const includes = parts.filter((p) => !p.startsWith("-"));
+
+  const known = new Set(providerKeys);
+
+  // Includes decide the starting set; with only exclusions, start from all.
+  const expanded: string[] = [];
+  if (includes.length > 0) {
+    // Resolve: provider names take priority over preset names.
+    // Only expand as preset if the name is NOT a direct provider.
+    for (const p of includes) {
+      if (known.has(p)) expanded.push(p);
+      else if (PRESETS[p]) expanded.push(...PRESETS[p]);
+      else expanded.push(p); // will be filtered out below
+    }
+  } else {
+    expanded.push(...providerKeys);
+  }
+
+  const selected: string[] = [];
+  const seen = new Set<string>();
+  for (const p of expanded) {
+    if (!known.has(p) || excludes.has(p) || seen.has(p)) continue;
+    seen.add(p);
+    selected.push(p);
+  }
+  return selected;
+}

@@ -4,7 +4,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { VERSION } from "./shared/version.js";
 import { captureToolAnnotations } from "./shared/annotations.js";
-import { PRESETS } from "./shared/catalog.js";
+import { resolveProviders } from "./shared/catalog.js";
 import { registerResources } from "./shared/resources.js";
 import { registerPrompts } from "./shared/prompts.js";
 
@@ -60,54 +60,17 @@ const PROVIDERS: Record<string, () => Promise<{ register: (s: McpServer) => void
 };
 
 // ---------------------------------------------------------------------------
-// Provider filtering
-// ---------------------------------------------------------------------------
-// SPORTS_HUB_PROVIDERS controls which providers to load.
-//
-//   Not set / empty    → load "free" preset (19 providers, ~165 tools)
-//   "all"              → load ALL 41 providers (396 tools)
-//   "espn,nhl,mlb"     → load only these 3 (36 tools)
-//   "-odds,-oddsio"    → load all EXCEPT these (prefix with -)
-//
-// Presets (defined in shared/catalog.ts):
-//   "us-major", "soccer", "f1", "motorsport", "esports", "odds", "cricket",
-//   "golf", "chess", and "free" (all 19 no-key providers — the default).
-// ---------------------------------------------------------------------------
-
-function resolveProviders(): string[] {
-  const env = process.env.SPORTS_HUB_PROVIDERS?.trim();
-  if (!env) return PRESETS["free"]; // Default to free providers only
-  if (env === "all") return Object.keys(PROVIDERS);
-
-  // Check for preset
-  if (PRESETS[env]) return PRESETS[env];
-
-  const parts = env.split(",").map((s) => s.trim()).filter(Boolean);
-  const excludes = parts.filter((p) => p.startsWith("-")).map((p) => p.slice(1));
-  const includes = parts.filter((p) => !p.startsWith("-"));
-
-  // If we have includes, use only those. If we have excludes, remove from all.
-  if (includes.length > 0) {
-    // Resolve: provider names take priority over preset names.
-    // Only expand as preset if the name is NOT a direct provider.
-    const resolved: string[] = [];
-    for (const p of includes) {
-      if (PROVIDERS[p]) resolved.push(p);
-      else if (PRESETS[p]) resolved.push(...PRESETS[p]);
-      else resolved.push(p); // will be filtered out below
-    }
-    return resolved.filter((p) => PROVIDERS[p]);
-  }
-
-  return Object.keys(PROVIDERS).filter((p) => !excludes.includes(p));
-}
-
-// ---------------------------------------------------------------------------
 // Server
+// ---------------------------------------------------------------------------
+// Which providers get loaded is controlled by SPORTS_HUB_PROVIDERS — see
+// resolveProviders() in shared/catalog.ts, which also lists the presets.
 // ---------------------------------------------------------------------------
 
 async function main() {
-  const selected = resolveProviders();
+  const selected = resolveProviders(
+    process.env.SPORTS_HUB_PROVIDERS,
+    Object.keys(PROVIDERS)
+  );
   const isAll = selected.length === Object.keys(PROVIDERS).length;
 
   const server = new McpServer({
