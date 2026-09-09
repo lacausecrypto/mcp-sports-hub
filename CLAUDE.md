@@ -1,6 +1,6 @@
 # Sports Hub MCP Server
 
-Unified MCP server — 41 providers, 396 tools, one process.
+Unified MCP server — 43 providers, 413 tools, one process.
 Covers: NFL, NBA, EuroLeague, MLB, NHL, Soccer, F1, MotoGP, Formula E, NASCAR, Tennis, Cricket, MMA, Boxing, Golf, Esports, Rugby, Volleyball, Handball, College Sports, Chess, AFL, NFL fantasy, and more.
 Also exposes MCP **resources** (provider/preset catalogs at `sportshub://...`) and **prompts** (curated workflows like `whats-on-today`, `compare-odds`, `motorsport-weekend`).
 
@@ -51,6 +51,7 @@ Uses stdio transport — compatible with any LLM supporting the Model Context Pr
 | `sportsdata_` | SportsDataIO | `SPORTSDATA_IO_KEY` | 9 sports (data scrambled) | 12 | 1000/mo |
 | `odds_` | The Odds API | `THE_ODDS_API_KEY` | Odds 70+ sports, 40+ bookmakers | 9 | 500/mo |
 | `oddsio_` | Odds-API.io | `ODDS_API_IO_KEY` | Odds 34 sports, 265+ bookmakers | 10 | Free account |
+| `parlay_` | ParlayAPI | `PARLAY_API_KEY` | Public sport/book catalogs; own-key filtered odds | 3 | See current plans |
 | `sgo_` | Sports Game Odds | `SPORTS_GAME_ODDS_KEY` | Odds 55+ leagues, player props | 10 | Trial |
 | `mma_` | Fighting Tomatoes | `FIGHTING_TOMATOES_API_KEY` | MMA fight history | 8 | 200/mo |
 | `livegolf_` | Live Golf API | `LIVE_GOLF_API_KEY` | Golf PGA, DP World Tour | 8 | Free tier |
@@ -88,6 +89,12 @@ Uses stdio transport — compatible with any LLM supporting the Model Context Pr
 **Niche sports**: `sportdevs_get_matches` (rugby, volleyball, handball)
 **Team/player search**: `sportsdb_search_teams`, `sportsdb_search_players`, `mlb_search_players`
 
+## ParlayAPI private research
+
+Use `parlay_get_sports` and `parlay_get_bookmakers` for anonymous catalog discovery, then `parlay_get_odds` with a specific sport, region, bookmaker and market. Authenticated odds require the user's own `PARLAY_API_KEY`; catalog membership does not guarantee available quotes. Preserve source timestamps and distinguish missing or truncated results from complete coverage. ParlayAPI requests bypass the shared cache and are not retried automatically; odds calls can consume credits.
+
+This integration is for private personal analysis and internal tools. Do not expose the configured key through a shared MCP service or infer public display, shared-feed or redistribution rights from the code license. Documentation: https://parlay-api.com/docs. Current plans: https://parlay-api.com/pricing.
+
 ## Rate limits — use with care
 
 | Provider | Limit | Strategy |
@@ -120,7 +127,7 @@ Providers without published limits (ESPN, NHL, MLB, F1, OpenF1, OpenLigaDB, Golf
 ## Provider Filtering
 
 By default, only the `free` preset is loaded (19 providers, ~165 tools — no API keys needed).
-Set `SPORTS_HUB_PROVIDERS=all` for all 41 providers (396 tools), but that many tools can overwhelm LLMs.
+Set `SPORTS_HUB_PROVIDERS=all` for all 43 providers (413 tools), but that many tools can overwhelm LLMs.
 Use `SPORTS_HUB_PROVIDERS` to control which providers are active.
 
 ### Presets (recommended)
@@ -132,7 +139,7 @@ Use `SPORTS_HUB_PROVIDERS` to control which providers are active.
 | `f1` | f1, openf1 | Formula 1 |
 | `motorsport` | f1, openf1, motogp, formulae, nascar | F1, MotoGP, Formula E, NASCAR |
 | `esports` | pandascore, opendota | LoL, CS2, Dota 2 (+ deep Dota analytics)... |
-| `odds` | odds, oddsio, sgo | Betting odds |
+| `odds` | odds, oddsio, sgo, lumify, parlay | Betting odds |
 | `cricket` | cricket, entitycricket | Cricket |
 | `golf` | livegolf, golfcourse | Golf |
 | `chess` | lichess, chesscom | Chess (Lichess + Chess.com) |
@@ -144,7 +151,7 @@ Use `SPORTS_HUB_PROVIDERS` to control which providers are active.
 # Default — free preset, 19 no-key providers, ~165 tools
 node dist/index.js
 
-# All 41 providers (396 tools)
+# All 43 providers (413 tools)
 SPORTS_HUB_PROVIDERS=all node dist/index.js
 
 # Preset — recommended for most users
@@ -181,7 +188,7 @@ In Claude Desktop config:
 LLMs work best with fewer, focused tools. Recommendations:
 - **General use**: `free` preset (19 providers, ~165 tools)
 - **Specific sport**: use the sport preset (`f1`, `soccer`, `esports`, etc.)
-- **Full access**: `SPORTS_HUB_PROVIDERS=all` (396 tools — works but slower tool selection)
+- **Full access**: `SPORTS_HUB_PROVIDERS=all` (413 tools — works but slower tool selection)
 
 ## Transport
 
