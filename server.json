@@ -1,7 +1,7 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.lacausecrypto/sports-hub",
-  "description": "41 sports API providers, 396 tools: scores, stats, odds, esports, chess, motorsport & more.",
+  "description": "43 sports API providers, 413 tools: scores, stats, odds, esports, chess, motorsport & more.",
   "repository": {
     "url": "https://github.com/lacausecrypto/mcp-sports-hub",
     "source": "github"
@@ -40,6 +40,13 @@
         {
           "name": "THE_ODDS_API_KEY",
           "description": "The Odds API key (free at the-odds-api.com)",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": true
+        },
+        {
+          "name": "PARLAY_API_KEY",
+          "description": "Your own ParlayAPI key for private odds research. See parlay-api.com/docs and parlay-api.com/pricing. Catalog tools are anonymous.",
           "isRequired": false,
           "format": "string",
           "isSecret": true
