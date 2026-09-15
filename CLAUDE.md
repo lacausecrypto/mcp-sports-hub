@@ -1,6 +1,6 @@
 # Sports Hub MCP Server
 
-Unified MCP server — 41 providers, 396 tools, one process.
+Unified MCP server — 43 providers, 422 tools, one process.
 Covers: NFL, NBA, EuroLeague, MLB, NHL, Soccer, F1, MotoGP, Formula E, NASCAR, Tennis, Cricket, MMA, Boxing, Golf, Esports, Rugby, Volleyball, Handball, College Sports, Chess, AFL, NFL fantasy, and more.
 Also exposes MCP **resources** (provider/preset catalogs at `sportshub://...`) and **prompts** (curated workflows like `whats-on-today`, `compare-odds`, `motorsport-weekend`).
 
@@ -36,7 +36,7 @@ Uses stdio transport — compatible with any LLM supporting the Model Context Pr
 `sportsdb_` defaults to test key "3" (free, watermarked images). Set `THESPORTSDB_API_KEY` for a personal key.
 `sportsrc_` V1 endpoints are free with no key. V2 (xG, momentum, lineups) needs `SPORTSRC_API_KEY` and is currently NOT exposed.
 
-### API key required (22 providers, ~231 tools)
+### API key required (24 providers, ~257 tools)
 
 | Prefix | Provider | Env var | Coverage | Tools | Free limit |
 |--------|----------|---------|----------|-------|------------|
@@ -52,6 +52,8 @@ Uses stdio transport — compatible with any LLM supporting the Model Context Pr
 | `odds_` | The Odds API | `THE_ODDS_API_KEY` | Odds 70+ sports, 40+ bookmakers | 9 | 500/mo |
 | `oddsio_` | Odds-API.io | `ODDS_API_IO_KEY` | Odds 34 sports, 265+ bookmakers | 10 | Free account |
 | `sgo_` | Sports Game Odds | `SPORTS_GAME_ODDS_KEY` | Odds 55+ leagues, player props | 10 | Trial |
+| `lumify_` | Lumify | `LUMIFY_API_KEY` | Odds, line movement, betting splits, AI bet analysis | 14 | Free trial |
+| `magicmarkets_` | MagicMarkets | `MAGICMARKETS_API_KEY` | P2P betting exchange account: balance, orders, positions, betslip quotes | 12 | Free account |
 | `mma_` | Fighting Tomatoes | `FIGHTING_TOMATOES_API_KEY` | MMA fight history | 8 | 200/mo |
 | `livegolf_` | Live Golf API | `LIVE_GOLF_API_KEY` | Golf PGA, DP World Tour | 8 | Free tier |
 | `isports_` | iSportsAPI | `ISPORTSAPI_KEY` | Football + Basketball (Asia-Pacific) | 10 | Free tier |
@@ -73,6 +75,7 @@ Uses stdio transport — compatible with any LLM supporting the Model Context Pr
 **F1 data**: `f1_get_race_results` (historical 1950+), `openf1_get_laps` (live telemetry)
 **Motorsport (beyond F1)**: `motogp_get_standings`, `formulae_get_driver_standings`, `nascar_get_schedule`, `nascar_get_live`
 **Betting odds (live)**: `odds_get_odds`, `oddsio_get_odds`, `sgo_get_odds`, `highlightly_get_odds`
+**Betting exchange account (MagicMarkets)**: `magicmarkets_get_balance`, `magicmarkets_get_position`, `magicmarkets_list_orders`, `magicmarkets_get_betslip` (your own account only, not a public odds feed)
 **Betting odds (historical, for backtesting)**: `footballdata_uk_get_matches` (results + closing odds, 2000-now)
 **Basketball (beyond NBA)**: `euroleague_get_games`, `euroleague_get_game_boxscore` (EuroLeague + EuroCup), `bdl_get_*` (NBA)
 **Boxing**: `boxing_get_fighters`, `boxing_get_bouts`, `boxing_get_events` (distinct from MMA)
@@ -111,6 +114,7 @@ Providers without published limits (ESPN, NHL, MLB, F1, OpenF1, OpenLigaDB, Golf
 - **Football-Data.co.uk** (`footballdata_uk_`): CSV parsed to JSON; historical (updated within days of each round), not live. Cryptic column codes — see https://www.football-data.co.uk/notes.txt.
 - **Boxing** (`boxing_`): Via RapidAPI; free Basic plan is only **100 requests/month** — use sparingly.
 - **Highlightly** (`highlightly_`): Free Basic = 100 req/day. `sport` is part of the path (e.g. "football" = soccer). Standings need leagueId + season.
+- **MagicMarkets** (`magicmarkets_`): Read-only half of the v2 exchange API. Every tool needs a key and returns **your own account's** data (balance, orders, positions, betslips); there is no public fixtures or odds feed over REST. Order placement, order closing and heartbeat writes are deliberately not exposed. Live event discovery and streaming prices are WebSocket-only (`wss://magicmarkets.com/v2/stream`) and out of scope for this server. Account endpoints cache for 5s, reference endpoints for 60s.
 - **TheSportsDB** (`sportsdb_`): Test key "3" = watermarked images. $1/mo Patreon for clean images.
 - **SportsDataIO** (`sportsdata_`): Free tier data is partially randomized/scrambled.
 - **Sportmonks** (`sportmonks_`): Free = only Danish Superliga + Scottish Premiership.
@@ -120,7 +124,7 @@ Providers without published limits (ESPN, NHL, MLB, F1, OpenF1, OpenLigaDB, Golf
 ## Provider Filtering
 
 By default, only the `free` preset is loaded (19 providers, ~165 tools — no API keys needed).
-Set `SPORTS_HUB_PROVIDERS=all` for all 41 providers (396 tools), but that many tools can overwhelm LLMs.
+Set `SPORTS_HUB_PROVIDERS=all` for all 43 providers (422 tools), but that many tools can overwhelm LLMs.
 Use `SPORTS_HUB_PROVIDERS` to control which providers are active.
 
 ### Presets (recommended)
@@ -132,7 +136,8 @@ Use `SPORTS_HUB_PROVIDERS` to control which providers are active.
 | `f1` | f1, openf1 | Formula 1 |
 | `motorsport` | f1, openf1, motogp, formulae, nascar | F1, MotoGP, Formula E, NASCAR |
 | `esports` | pandascore, opendota | LoL, CS2, Dota 2 (+ deep Dota analytics)... |
-| `odds` | odds, oddsio, sgo | Betting odds |
+| `odds` | odds, oddsio, sgo, lumify | Betting odds |
+| `exchange` | magicmarkets | Betting exchange account: your own orders, positions and balance |
 | `cricket` | cricket, entitycricket | Cricket |
 | `golf` | livegolf, golfcourse | Golf |
 | `chess` | lichess, chesscom | Chess (Lichess + Chess.com) |
@@ -144,7 +149,7 @@ Use `SPORTS_HUB_PROVIDERS` to control which providers are active.
 # Default — free preset, 19 no-key providers, ~165 tools
 node dist/index.js
 
-# All 41 providers (396 tools)
+# All 43 providers (422 tools)
 SPORTS_HUB_PROVIDERS=all node dist/index.js
 
 # Preset — recommended for most users
@@ -181,7 +186,7 @@ In Claude Desktop config:
 LLMs work best with fewer, focused tools. Recommendations:
 - **General use**: `free` preset (19 providers, ~165 tools)
 - **Specific sport**: use the sport preset (`f1`, `soccer`, `esports`, etc.)
-- **Full access**: `SPORTS_HUB_PROVIDERS=all` (396 tools — works but slower tool selection)
+- **Full access**: `SPORTS_HUB_PROVIDERS=all` (422 tools — works but slower tool selection)
 
 ## Transport
 
