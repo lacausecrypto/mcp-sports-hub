@@ -162,6 +162,9 @@ const TEST_CASES = {
   "lumify.js": [
     { tool: "lumify_get_sports", args: {}, envs: ["LUMIFY_API_KEY"] },
   ],
+  "magicmarkets.js": [
+    { tool: "magicmarkets_get_xrates", args: {}, envs: ["MAGICMARKETS_API_KEY"] },
+  ],
   "fighting-tomatoes.js": [
     { tool: "mma_get_organizations", args: {}, envs: ["FIGHTING_TOMATOES_API_KEY"] },
   ],

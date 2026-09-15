@@ -25,7 +25,7 @@
   <img src="https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white" alt="TypeScript">
 </p>
 
-A unified MCP server that aggregates **42 sports API providers** into a single service. **410 tools** covering scores, stats, odds, esports, college sports, chess, motorsport, boxing, AFL, and more across 70+ sports.
+A unified MCP server that aggregates **43 sports API providers** into a single service. **422 tools** covering scores, stats, odds, esports, college sports, chess, motorsport, boxing, AFL, and more across 70+ sports.
 
 > Each provider works independently. You only need API keys for the providers you use. Missing keys don't block startup — tools return an error when called without their key.
 
@@ -103,7 +103,7 @@ These providers work out of the box. Just build and run.
 
 > **Tip**: Use `SPORTS_HUB_PROVIDERS=free` to load only these 19 providers (~165 tools).
 
-### Free tier with API key — signup required, no credit card (23 providers, ~245 tools)
+### Free tier with API key — signup required, no credit card (24 providers, ~257 tools)
 
 Registration takes 1-2 minutes. All keys are free.
 
@@ -123,6 +123,7 @@ Registration takes 1-2 minutes. All keys are free.
 | `oddsio_` | Odds-API.io | 34 sports odds | 10 | Free account | [Sign up](https://odds-api.io/) |
 | `sgo_` | Sports Game Odds | 55+ leagues odds | 10 | Trial | [Sign up](https://sportsgameodds.com/) |
 | `lumify_` | Lumify | Odds, splits + AI bet analysis (8 sports) | 14 | Free trial key | [Sign up](https://lumify.ai/) |
+| `magicmarkets_` | MagicMarkets | P2P betting exchange — balance, orders, positions, betslip quotes | 12 | Free account key | [Sign up](https://magicmarkets.com/) |
 | `mma_` | Fighting Tomatoes | MMA | 8 | 200 req/mo | [Sign up](https://fightingtomatoes.com/) |
 | `livegolf_` | Live Golf API | Golf (PGA/DP World) | 8 | Free tier | [Sign up](https://livegolfapi.com/) |
 | `isports_` | iSportsAPI | Football/Basketball (Asia) | 10 | Free tier | [Sign up](https://www.isportsapi.com/) |
@@ -243,6 +244,7 @@ export MYSPORTSFEEDS_USER="your-user"           # https://www.mysportsfeeds.com/
 export MYSPORTSFEEDS_PASS="your-pass"
 export CFBD_API_KEY="your-key"                  # https://collegefootballdata.com/key
 export LUMIFY_API_KEY="your-key"                # https://lumify.ai/
+export MAGICMARKETS_API_KEY="your-key"          # https://magicmarkets.com/ (Settings -> API)
 ```
 
 **Windows** (PowerShell):
@@ -336,7 +338,7 @@ By default, only the **free preset** is loaded (19 providers, ~165 tools — no 
 # Default — free providers only (no config needed)
 npx mcp-sports-hub
 
-# Load ALL 42 providers (410 tools)
+# Load ALL 43 providers (422 tools)
 SPORTS_HUB_PROVIDERS=all npx mcp-sports-hub
 
 # Use a preset
@@ -354,7 +356,7 @@ SPORTS_HUB_PROVIDERS=-sportsdata,-mma npx mcp-sports-hub
 | Preset | Providers | Tools | Needs keys? |
 |--------|-----------|-------|-------------|
 | `free` (default) | 19 no-key providers (espn, nhl, mlb, f1, openf1, openliga, sportsdb, ncaa, sportsrc, lichess, chesscom, squiggle, motogp, formulae, nascar, opendota, sleeper, euroleague, footballdatauk) | ~165 | No |
-| `all` | all 42 providers | 410 | Yes (for key-required providers) |
+| `all` | all 43 providers | 422 | Yes (for key-required providers) |
 | `chess` | lichess, chesscom | 14 | No |
 | `us-major` | espn, nhl, mlb, ncaa, cfbd, bdl, msf, nascar, sleeper | ~93 | Some |
 | `soccer` | espn, apifootball, footballdata, sportmonks, openliga, sportsrc, footballdatauk, highlightly | ~73 | Some |
@@ -362,6 +364,7 @@ SPORTS_HUB_PROVIDERS=-sportsdata,-mma npx mcp-sports-hub
 | `motorsport` | f1, openf1, motogp, formulae, nascar | ~42 | No |
 | `esports` | pandascore, opendota | 25 | Some |
 | `odds` | odds, oddsio, sgo, lumify | 43 | Yes |
+| `exchange` | magicmarkets | 12 | Yes |
 | `cricket` | cricket, entitycricket | 22 | Yes |
 | `golf` | livegolf, golfcourse | 14 | Some |
 
@@ -417,7 +420,7 @@ Beyond tools, the server exposes:
 - `sportshub://presets` — all presets and the providers they load
 - `sportshub://provider/{key}` — details for one provider (with key autocompletion)
 
-**Prompts** (curated slash-command workflows over the 410 tools):
+**Prompts** (curated slash-command workflows over the 422 tools):
 - `whats-on-today` · `compare-odds {event}` · `motorsport-weekend {series}` · `league-standings {league}` · `team-deep-dive {team}` · `f1-race {season} {round}`
 
 All tools are annotated `readOnly` / `idempotent` so clients can skip confirmation prompts.
@@ -426,7 +429,7 @@ All tools are annotated `readOnly` / `idempotent` so clients can skip confirmati
 
 ```
 src/
-├── index.ts                    # Imports + registers all 42 providers; transports
+├── index.ts                    # Imports + registers all 43 providers; transports
 ├── shared/
 │   ├── http.ts                 # fetchJson, fetchText, buildUrl, toolResult, errorResult
 │   │                           #   + retry/backoff, coalescing, keyed cache
@@ -460,6 +463,7 @@ src/
     ├── odds-api-io.ts          #  10 tools — ODDS_API_IO_KEY
     ├── sports-game-odds.ts     #  10 tools — SPORTS_GAME_ODDS_KEY
     ├── lumify.ts               #  14 tools — LUMIFY_API_KEY
+    ├── magicmarkets.ts         #  12 tools — MAGICMARKETS_API_KEY
     ├── fighting-tomatoes.ts    #   8 tools — FIGHTING_TOMATOES_API_KEY
     ├── live-golf.ts            #   8 tools — LIVE_GOLF_API_KEY
     ├── isportsapi.ts           #  10 tools — ISPORTSAPI_KEY

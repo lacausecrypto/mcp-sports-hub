@@ -50,6 +50,7 @@ const PROVIDERS: Record<string, () => Promise<{ register: (s: McpServer) => void
   oddsio:         () => import("./providers/odds-api-io.js"),
   sgo:            () => import("./providers/sports-game-odds.js"),
   lumify:         () => import("./providers/lumify.js"),
+  magicmarkets:   () => import("./providers/magicmarkets.js"),
   mma:            () => import("./providers/fighting-tomatoes.js"),
   livegolf:       () => import("./providers/live-golf.js"),
   isports:        () => import("./providers/isportsapi.js"),
@@ -68,7 +69,7 @@ const PROVIDERS: Record<string, () => Promise<{ register: (s: McpServer) => void
 // SPORTS_HUB_PROVIDERS controls which providers to load.
 //
 //   Not set / empty    → load "free" preset (19 providers, ~165 tools)
-//   "all"              → load ALL 41 providers (396 tools)
+//   "all"              → load ALL 43 providers (422 tools)
 //   "espn,nhl,mlb"     → load only these 3 (36 tools)
 //   "-odds,-oddsio"    → load all EXCEPT these (prefix with -)
 //   "us-major,-cfbd"   → a preset minus some of its members
@@ -204,7 +205,7 @@ async function main() {
   // Warn about tool bloat
   if (isAll) {
     console.error("");
-    console.error(`  ⚠ All ${Object.keys(PROVIDERS).length} providers loaded (396 tools).`);
+    console.error(`  ⚠ All ${Object.keys(PROVIDERS).length} providers loaded (422 tools).`);
     console.error("    LLMs work best with fewer tools. Consider using a preset:");
     console.error("    SPORTS_HUB_PROVIDERS=free        → 19 providers, ~165 tools (no keys needed)");
     console.error("    SPORTS_HUB_PROVIDERS=us-major    → 9 providers, ~93 tools");
