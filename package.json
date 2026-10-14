@@ -1,7 +1,7 @@
 {
   "name": "mcp-sports-hub",
   "version": "1.3.0",
-  "description": "Unified MCP server — 41 sports API providers, 396 tools. Scores, stats, odds, esports, chess, motorsport, boxing, AFL, and more.",
+  "description": "Unified MCP server — 42 sports API providers, 410 tools. Scores, stats, odds, esports, chess, motorsport, boxing, AFL, and more.",
   "mcpName": "io.github.lacausecrypto/sports-hub",
   "type": "module",
   "main": "dist/index.js",
