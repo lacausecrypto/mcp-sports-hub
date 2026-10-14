@@ -8,7 +8,7 @@
     "start": "next start"
   },
   "dependencies": {
-    "next": "15.5.12",
+    "next": "15.5.27",
     "react": "19.1.1",
     "react-dom": "19.1.1",
     "recharts": "^2.15.4",
