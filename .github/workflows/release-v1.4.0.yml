@@ -1,0 +1,74 @@
+name: Release v1.4.0 (npm verified)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/release-v1.4.0.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sports-hub-release-v1.4.0
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Verify manifest versions
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+          const j = name => JSON.parse(readFileSync(name, 'utf8'));
+          const targets = [j('package.json').version, j('package-lock.json').version, j('package-lock.json').packages[''].version, j('manifest.json').version, j('server.json').version, j('server.json').packages[0].version];
+          if (targets.some(v => v !== '1.4.0')) { console.error('Version mismatch:', targets); process.exit(1); }
+          console.log('All manifests are 1.4.0');
+          NODE
+      - name: Require npm package 1.4.0 before release
+        shell: bash
+        run: |
+          set -euo pipefail
+          PUBLISHED="$(npm view mcp-sports-hub@1.4.0 version --registry=https://registry.npmjs.org --fetch-retries=2 --fetch-timeout=15000)"
+          test "$PUBLISHED" = '1.4.0' || { echo "::error::npm package mcp-sports-hub@1.4.0 not found. Publish npm first."; exit 1; }
+          echo "npm published version verified: $PUBLISHED"
+      - name: Install and test
+        run: |
+          npm ci
+          npm run typecheck
+          npm test
+      - name: Build MCPB release artifact
+        run: |
+          npx --yes @anthropic-ai/mcpb pack
+          find . -maxdepth 1 -type f -name '*.mcpb' -print
+      - name: Publish GitHub release with bundled artifact
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh release view v1.4.0 >/dev/null 2>&1; then
+            echo "Release v1.4.0 already exists; not overwriting."
+            exit 0
+          fi
+          shopt -s nullglob
+          artifacts=( *.mcpb )
+          if [ "${#artifacts[@]}" -eq 0 ]; then
+            echo "::error::MCPB pack did not create an artifact."
+            exit 1
+          fi
+          gh release create v1.4.0 "${artifacts[@]}" \
+            --target "${GITHUB_SHA}" \
+            --title "Sports Hub v1.4.0" \
+            --notes "Sports Hub v1.4.0: the previously merged provider and reliability improvements, including the Lumify integration, multi-client HTTP fixes, preset deduplication and auth-aware caching. Includes MCPB distribution bundle. npm mcp-sports-hub@1.4.0 was verified before publication." \
+            --verify-tag
