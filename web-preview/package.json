@@ -1,0 +1,17 @@
+{
+  "name": "sports-hub-vitrine",
+  "version": "0.9.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "next": "15.5.12",
+    "react": "19.1.1",
+    "react-dom": "19.1.1",
+    "recharts": "^2.15.4",
+    "lucide-react": "^0.468.0"
+  }
+}
