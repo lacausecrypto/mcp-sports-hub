@@ -1,0 +1,40 @@
+name: Dependency security repair
+on:
+  push:
+    branches: [security/dependency-audit-2026-10]
+permissions:
+  contents: write
+jobs:
+  audit-and-repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Before security report
+        run: npm audit --json > audit-before.json || true
+      - name: Apply nonbreaking dependency security fixes
+        run: npm audit fix
+      - name: Confirm no known vulnerabilities
+        run: npm audit --audit-level=low
+      - name: Validate build and tests
+        run: |
+          npm run typecheck
+          npm test
+      - name: Commit patched dependency manifests
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add package-lock.json package.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'fix(security): patch vulnerable dependencies'
+            git push origin HEAD:security/dependency-audit-2026-10
+          fi
+      - name: Final dependency versions
+        run: npm ls --depth=0
