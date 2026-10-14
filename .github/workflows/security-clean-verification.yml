@@ -1,0 +1,26 @@
+name: Dependency clean-install verification
+on:
+  push:
+    branches: [security/dependency-audit-2026-10]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Reproduce with lockfile only
+        run: npm ci
+      - name: Audit all installed dependencies
+        run: npm audit --audit-level=low
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Full tests
+        run: npm test
+      - name: Print resolved dependency tree
+        run: npm ls --depth=0
