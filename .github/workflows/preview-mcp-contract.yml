@@ -1,0 +1,19 @@
+name: Preview MCP provider contract verification
+on:
+  push:
+    branches: [deploy/preview-mcp-private-v1.4.1]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: node scripts/validate-preview-tools.mjs
