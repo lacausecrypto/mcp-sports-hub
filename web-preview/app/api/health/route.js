@@ -1,0 +1,1 @@
+import {NextResponse} from 'next/server';export function GET(){return NextResponse.json({status:'ok',version:'0.9.0',backend:'restricted authenticated Sports Hub MCP gateway',configured:Boolean(process.env.SPORTS_HUB_GATEWAY_URL)},{headers:{'Cache-Control':'no-store'}})}
