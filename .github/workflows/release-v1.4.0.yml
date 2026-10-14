@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 concurrency:
   group: sports-hub-release-v1.4.0
@@ -71,4 +72,11 @@ jobs:
             --target "${GITHUB_SHA}" \
             --title "Sports Hub v1.4.0" \
             --notes "Sports Hub v1.4.0: the previously merged provider and reliability improvements, including the Lumify integration, multi-client HTTP fixes, preset deduplication and auth-aware caching. Includes MCPB distribution bundle. npm mcp-sports-hub@1.4.0 was verified before publication." \
-            --verify-tag
+            --latest
+      - name: Publish to official MCP Registry
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_amd64.tar.gz" | tar -xz mcp-publisher
+          ./mcp-publisher login github-oidc
+          ./mcp-publisher publish
