@@ -11,7 +11,7 @@ try{
   await page.goto('http://127.0.0.1:3000',{waitUntil:'networkidle'});
   await page.getByText('Beyond').first().waitFor();
   await page.getByText('Game tracker').waitFor();
-  await page.getByRole('button',{name:/Visual lab/i}).click({force:true});
+  await page.getByRole('button',{name:'Visual lab',exact:true}).click({force:true});
   await page.getByText('Driver championship').waitFor();
   await page.getByRole('button',{name:/Standings/i}).click({force:true});
   await page.getByText('Driver Alpha').first().waitFor();
