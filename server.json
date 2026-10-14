@@ -6,12 +6,12 @@
     "url": "https://github.com/lacausecrypto/mcp-sports-hub",
     "source": "github"
   },
-  "version": "1.4.0",
+  "version": "1.4.1",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "mcp-sports-hub",
-      "version": "1.4.0",
+      "version": "1.4.1",
       "transport": {
         "type": "stdio"
       },

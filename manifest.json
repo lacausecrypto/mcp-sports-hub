@@ -2,7 +2,7 @@
   "manifest_version": "0.2",
   "name": "sports-hub",
   "display_name": "Sports Hub",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "42 sports API providers, 410 tools — scores, stats, odds, esports, chess, motorsport, boxing, AFL and more, in one MCP server.",
   "long_description": "Sports Hub aggregates 42 independent sports data APIs behind a single MCP server. By default it loads the `free` preset (19 no-key providers, ~165 tools) so it works with zero configuration. Set `SPORTS_HUB_PROVIDERS` to a preset (free, us-major, soccer, f1, motorsport, esports, odds, cricket, golf, chess) or `all`, and add API keys only for the providers you need.",
   "author": {
@@ -13,13 +13,29 @@
   "documentation": "https://github.com/lacausecrypto/mcp-sports-hub#readme",
   "support": "https://github.com/lacausecrypto/mcp-sports-hub/issues",
   "license": "MIT",
-  "keywords": ["sports", "scores", "stats", "odds", "esports", "f1", "motorsport", "nfl", "nba", "mlb", "nhl", "soccer", "chess"],
+  "keywords": [
+    "sports",
+    "scores",
+    "stats",
+    "odds",
+    "esports",
+    "f1",
+    "motorsport",
+    "nfl",
+    "nba",
+    "mlb",
+    "nhl",
+    "soccer",
+    "chess"
+  ],
   "server": {
     "type": "node",
     "entry_point": "dist/index.js",
     "mcp_config": {
       "command": "node",
-      "args": ["${__dirname}/dist/index.js"],
+      "args": [
+        "${__dirname}/dist/index.js"
+      ],
       "env": {
         "SPORTS_HUB_PROVIDERS": "${user_config.providers}",
         "THE_ODDS_API_KEY": "${user_config.the_odds_api_key}",
