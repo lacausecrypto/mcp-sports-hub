@@ -1,0 +1,35 @@
+name: Fieldnotes preview quality gate
+on:
+  push:
+    branches: [feat/sports-hub-vitrine-v0.9]
+    paths: ['web-preview/**','.github/workflows/fieldnotes-preview.yml']
+  pull_request:
+    paths: ['web-preview/**']
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: web-preview
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Security audit
+        run: npm audit --audit-level=high
+      - name: Build production application
+        run: npm run build
+      - name: Verify legal routes exist
+        run: |
+          test -f app/privacy/page.jsx
+          test -f app/legal/page.jsx
+          test -f app/cookies/page.jsx
+          test -f app/about/page.jsx
+          test -f app/api/data/route.js
+          test -f app/api/chat/route.js
