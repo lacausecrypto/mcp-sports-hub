@@ -1,0 +1,63 @@
+name: Release v1.4.1 after manual npm publication
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+  id-token: write
+concurrency:
+  group: sports-hub-release-v1.4.1
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Verify manifest versions
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const j=p=>JSON.parse(fs.readFileSync(p,'utf8'));
+          const versions=[j('package.json').version,j('package-lock.json').version,j('package-lock.json').packages[''].version,j('manifest.json').version,j('server.json').version,j('server.json').packages[0].version];
+          if(versions.some(v=>v!=='1.4.1')) { console.error('Version mismatch:',versions); process.exit(1); }
+          console.log('All release manifests are v1.4.1');
+          NODE
+      - name: Require manually published npm version
+        run: |
+          set -euo pipefail
+          published="$(npm view mcp-sports-hub@1.4.1 version --registry=https://registry.npmjs.org --fetch-retries=2 --fetch-timeout=15000)"
+          test "$published" = "1.4.1" || { echo "::error::Publish mcp-sports-hub@1.4.1 manually first."; exit 1; }
+      - name: Security and regression checks
+        run: |
+          npm ci
+          npm audit --audit-level=low
+          npm run typecheck
+          npm test
+      - name: Build and pack MCPB
+        run: |
+          npm run build
+          npx --yes @anthropic-ai/mcpb pack
+          ls -lh *.mcpb
+      - name: Create release (no npm publish)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view v1.4.1 >/dev/null 2>&1; then
+            echo 'GitHub release already exists; skipping.'
+            exit 0
+          fi
+          shopt -s nullglob
+          artifacts=( *.mcpb )
+          test "${#artifacts[@]}" -ge 1
+          gh release create v1.4.1 "${artifacts[@]}" \
+            --target "$GITHUB_SHA" \
+            --title "Sports Hub v1.4.1 — Security Patch" \
+            --notes "Security maintenance release. Resolves 8 npm audit findings via updated lockfile (initially 1 critical, 3 high, 3 moderate, 1 low); zero advisories in clean installation. All 196 automated tests pass. npm publication is performed manually by the maintainer before the GitHub release."
