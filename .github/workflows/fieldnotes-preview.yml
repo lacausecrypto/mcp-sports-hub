@@ -25,6 +25,18 @@ jobs:
         run: npm audit --audit-level=high
       - name: Build production application
         run: npm run build
+      - name: Install browser test runtime
+        run: |
+          npm install --no-save playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Browser smoke test (desktop and mobile)
+        run: |
+          npm run start -- --hostname 127.0.0.1 --port 3000 >/tmp/fieldnotes-next.log 2>&1 &
+          for i in {1..30}; do
+            curl -sf http://127.0.0.1:3000/ && break
+            sleep 2
+          done
+          node scripts/browser-smoke.mjs
       - name: Verify legal routes exist
         run: |
           test -f app/privacy/page.jsx
