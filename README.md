@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Providers-41-orange" alt="41 Providers">
+  <img src="https://img.shields.io/badge/Providers-42-orange" alt="42 Providers">
   <img src="https://img.shields.io/badge/Tools-410-green" alt="410 Tools">
   <a href="https://registry.modelcontextprotocol.io"><img src="https://img.shields.io/badge/MCP_Registry-published-8B5CF6?logo=anthropic&logoColor=white" alt="MCP Registry"></a>
 </p>
@@ -73,7 +73,7 @@ Uses the **stdio transport** from the [MCP SDK](https://modelcontextprotocol.io)
 
 **Requirements**: Node.js 18+, npm.
 
-## Providers (32)
+## Providers (42)
 
 ### Works instantly — no API key, no signup (19 providers, ~165 tools)
 
