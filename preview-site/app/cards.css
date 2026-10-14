@@ -1,0 +1,1 @@
+.overviewGrid{display:grid;grid-template-columns:1.45fr .9fr;gap:14px}.chartGrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.chartCard.wide{grid-column:1/-1}
