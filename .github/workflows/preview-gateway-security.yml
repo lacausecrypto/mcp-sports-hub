@@ -1,0 +1,16 @@
+name: Preview gateway external security smoke
+on:
+  push:
+    branches: [deploy/preview-mcp-private-v1.4.1]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node scripts/preview-security-smoke.mjs
