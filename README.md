@@ -71,7 +71,7 @@ A unified MCP server that aggregates **42 sports API providers** into a single s
 
 Uses the **stdio transport** from the [MCP SDK](https://modelcontextprotocol.io). Works with any LLM (Claude, GPT, Gemini, Llama, Mistral, etc.).
 
-**Requirements**: Node.js 18+, npm.
+**Requirements**: Node.js 20+, npm.
 
 ## Providers (42)
 

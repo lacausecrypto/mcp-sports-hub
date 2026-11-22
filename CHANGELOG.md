@@ -15,6 +15,7 @@ Audit fixes: valid and much smaller tool output, quota protection, and a hardene
 - User-supplied path segments are now encoded in OpenLigaDB, Jolpica F1, NHL, football-data.org, BallDontLie, EuroLeague and Entity Sport.
 
 ### Changed (breaking)
+- **Node.js 20+ required.** HTTP mode already failed on Node 18 (the SDK's `@hono/node-server` needs Node ≥ 20); the new HTTP tests exposed it. CI now runs Node 20, 22 and 24.
 - **Public bind is fail-closed.** On a non-loopback `SPORTS_HUB_HOST`, the server exits unless `SPORTS_HUB_GATEWAY_TOKEN` (≥ 32 chars, constant-time Bearer check) or `SPORTS_HUB_ALLOW_PUBLIC=1` is set. `smithery.yaml` sets the latter.
 - **`openf1_get_car_data` requires `date_gte` and `date_lte`.** A whole session is several MB of telemetry.
 - **`espn_get_scoreboard` is compact by default** (no highlights, headlines, leaders, team stats, odds, link sets, calendar): 145 KB → 17 KB for an NBA night, every game kept. `detail: "full"` restores the raw payload.
