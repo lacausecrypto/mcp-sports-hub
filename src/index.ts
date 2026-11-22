@@ -228,6 +228,23 @@ async function startHttp(selected: string[], port: number): Promise<void> {
   // on the network — only do this if you understand the implications
   // (see SPORTS_HUB_ALLOWED_HOSTS / SPORTS_HUB_ALLOWED_ORIGINS below).
   const host = process.env.SPORTS_HUB_HOST ?? "127.0.0.1";
+  const loopback = host === "127.0.0.1" || host === "::1" || host === "localhost";
+
+  // Gateway auth. When set, every request must carry `Authorization: Bearer <token>` (compared in constant time).
+  // Exposing the server beyond loopback without it is refused at startup: a forgotten variable must not turn a
+  // private origin public in silence. A deliberately public keyless endpoint (Smithery) says so explicitly.
+  const gatewayToken = process.env.SPORTS_HUB_GATEWAY_TOKEN?.trim() || undefined;
+  if (gatewayToken !== undefined && gatewayToken.length < 32) {
+    console.error("SPORTS_HUB_GATEWAY_TOKEN must contain at least 32 characters.");
+    process.exit(1);
+  }
+  if (!loopback && gatewayToken === undefined && process.env.SPORTS_HUB_ALLOW_PUBLIC !== "1") {
+    console.error(
+      `Refusing to listen on ${host} without SPORTS_HUB_GATEWAY_TOKEN. Set a token (≥ 32 chars), ` +
+        "or SPORTS_HUB_ALLOW_PUBLIC=1 for an intentionally public endpoint.",
+    );
+    process.exit(1);
+  }
 
   // DNS-rebinding protection. Allowed hosts are matched against the Host
   // header; allowed origins against the Origin header. The MCP spec
@@ -246,7 +263,15 @@ async function startHttp(selected: string[], port: number): Promise<void> {
   const { StreamableHTTPServerTransport } = await import(
     "@modelcontextprotocol/sdk/server/streamableHttp.js"
   );
-  const { randomUUID } = await import("node:crypto");
+  const { randomUUID, timingSafeEqual } = await import("node:crypto");
+  const { isInitializeRequest } = await import("@modelcontextprotocol/sdk/types.js");
+
+  function authorized(header: string | undefined): boolean {
+    if (gatewayToken === undefined) return true;
+    const expected = Buffer.from(`Bearer ${gatewayToken}`);
+    const received = Buffer.from(header ?? "");
+    return expected.length === received.length && timingSafeEqual(expected, received);
+  }
 
   // DNS-rebinding protection is ON by default — correct for a local HTTP
   // server a browser could reach on localhost. Behind a managed host (e.g.
@@ -259,22 +284,71 @@ async function startHttp(selected: string[], port: number): Promise<void> {
   // but it lets several replicas sit behind one load balancer with no sticky
   // routing. Session mode (default) pays the build cost once per client.
   const stateless = process.env.SPORTS_HUB_STATELESS === "1";
+  // Each session holds a full McpServer (~4 MB with the free preset). Idle sessions go after 5 min, and a full
+  // table evicts the least recently used one instead of answering 503 to everyone: one client opening sessions
+  // in a loop can no longer lock the server.
   const maxSessions = clampEnvInt(process.env.SPORTS_HUB_MAX_SESSIONS, 200, 1, 100_000);
   const sessionTtlMs =
-    clampEnvInt(process.env.SPORTS_HUB_SESSION_TTL, 1_800, 30, 86_400) * 1000;
+    clampEnvInt(process.env.SPORTS_HUB_SESSION_TTL, 300, 1, 86_400) * 1000;
+  // Behind an authenticated gateway, the gateway names the end client (e.g. a hash of its IP) so one client
+  // cannot hold more than its share. Unauthenticated, the header is spoofable and ignored.
+  const maxSessionsPerClient = clampEnvInt(process.env.SPORTS_HUB_MAX_SESSIONS_PER_CLIENT, 8, 1, 100_000);
+  const MAX_INIT_BODY_BYTES = 1_048_576;
 
   type Session = {
     transport: InstanceType<typeof StreamableHTTPServerTransport>;
     server: McpServer;
     lastSeen: number;
+    client: string | null;
   };
   const sessions = new Map<string, Session>();
 
-  const transportOptions = {
-    enableDnsRebindingProtection: dnsRebindingProtection,
-    ...(dnsRebindingProtection ? { allowedHosts } : {}),
-    ...(dnsRebindingProtection && allowedOrigins ? { allowedOrigins } : {}),
-  };
+  function closeSession(id: string): void {
+    const session = sessions.get(id);
+    if (!session) return;
+    sessions.delete(id);
+    void session.transport.close().catch(() => {});
+    void session.server.close().catch(() => {});
+  }
+
+  /** Evict the least recently seen session, among `client`'s own when given. */
+  function evictOldest(client: string | null = null): void {
+    let oldest: [string, number] | null = null;
+    for (const [id, session] of sessions) {
+      if (client !== null && session.client !== client) continue;
+      if (!oldest || session.lastSeen < oldest[1]) oldest = [id, session.lastSeen];
+    }
+    if (oldest) closeSession(oldest[0]);
+  }
+
+  function clientOf(req: import("node:http").IncomingMessage): string | null {
+    if (gatewayToken === undefined) return null;
+    const value = req.headers["x-sports-hub-client"];
+    const id = Array.isArray(value) ? value[0] : value;
+    return id && /^[A-Za-z0-9_-]{8,128}$/.test(id) ? id : null;
+  }
+
+  async function readJsonBody(req: import("node:http").IncomingMessage): Promise<unknown> {
+    const chunks: Buffer[] = [];
+    let total = 0;
+    for await (const chunk of req) {
+      total += (chunk as Buffer).length;
+      if (total > MAX_INIT_BODY_BYTES) throw new RangeError("Request body too large");
+      chunks.push(chunk as Buffer);
+    }
+    return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  }
+
+  // Host/Origin checks run here, before any route (the SDK transport options for this are deprecated, and only
+  // ever covered /mcp). Same semantics: Host must be listed; Origin, when present and a list is set, too.
+  function rebindingError(req: import("node:http").IncomingMessage): string | null {
+    if (!dnsRebindingProtection) return null;
+    const hostHeader = req.headers.host;
+    if (!hostHeader || !allowedHosts.includes(hostHeader)) return `Invalid Host header: ${hostHeader ?? "(none)"}`;
+    const originHeader = req.headers.origin;
+    if (allowedOrigins && originHeader && !allowedOrigins.includes(originHeader)) return `Invalid Origin header: ${originHeader}`;
+    return null;
+  }
 
   // Reap idle sessions so a long-lived server doesn't accumulate one McpServer
   // per client that ever connected. unref() keeps the timer from holding the
@@ -282,13 +356,9 @@ async function startHttp(selected: string[], port: number): Promise<void> {
   const sweeper = setInterval(() => {
     const cutoff = Date.now() - sessionTtlMs;
     for (const [id, session] of sessions) {
-      if (session.lastSeen < cutoff) {
-        sessions.delete(id);
-        void session.transport.close().catch(() => {});
-        void session.server.close().catch(() => {});
-      }
+      if (session.lastSeen < cutoff) closeSession(id);
     }
-  }, 60_000);
+  }, Math.min(60_000, sessionTtlMs));
   sweeper.unref();
 
   // CORS allowlist. Defaults to "no CORS" — only set
@@ -309,6 +379,7 @@ async function startHttp(selected: string[], port: number): Promise<void> {
   }
 
   const httpServer = createServer((req, res) => {
+    res.setHeader("X-Content-Type-Options", "nosniff");
     const origin = req.headers.origin;
     if (corsOrigins.length > 0 && origin && corsOrigins.includes(origin)) {
       res.setHeader("Access-Control-Allow-Origin", origin);
@@ -325,6 +396,17 @@ async function startHttp(selected: string[], port: number): Promise<void> {
     }
 
     const path = req.url?.split("?")[0] ?? "/";
+
+    const rebinding = rebindingError(req);
+    if (rebinding) {
+      jsonError(res, 403, rebinding);
+      return;
+    }
+
+    if (!authorized(req.headers.authorization)) {
+      jsonError(res, 401, "Unauthorized");
+      return;
+    }
 
     if (path === "/health") {
       res.writeHead(200, { "Content-Type": "application/json" });
@@ -360,7 +442,6 @@ async function startHttp(selected: string[], port: number): Promise<void> {
       const server = await buildServer(selected, false);
       const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: undefined,
-        ...transportOptions,
       });
       res.on("close", () => {
         void transport.close().catch(() => {});
@@ -385,20 +466,38 @@ async function startHttp(selected: string[], port: number): Promise<void> {
       return;
     }
 
-    // No session id: this must be an initialize request. Everything else is
-    // rejected by the transport itself with a spec-compliant error.
-    if (sessions.size >= maxSessions) {
-      jsonError(res, 503, `Session limit reached (${maxSessions}). Try again shortly.`);
+    // No session id: this must be an initialize request. Check that before paying for a server build
+    // (~17 ms and a few MB per call).
+    if (req.method !== "POST") {
+      jsonError(res, 400, "Missing mcp-session-id. Initialize first with POST /mcp.");
       return;
     }
+    let body: unknown;
+    try {
+      body = await readJsonBody(req);
+    } catch (error) {
+      jsonError(res, error instanceof RangeError ? 413 : 400, error instanceof RangeError ? error.message : "Invalid JSON body");
+      return;
+    }
+    if (!isInitializeRequest(body)) {
+      jsonError(res, 400, "Missing mcp-session-id. Only an initialize request may open a session.");
+      return;
+    }
+
+    const client = clientOf(req);
+    if (client !== null) {
+      let owned = 0;
+      for (const session of sessions.values()) if (session.client === client) owned++;
+      if (owned >= maxSessionsPerClient) evictOldest(client);
+    }
+    if (sessions.size >= maxSessions) evictOldest();
 
     const server = await buildServer(selected, false);
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: () => randomUUID(),
       onsessioninitialized: (id: string) => {
-        sessions.set(id, { transport, server, lastSeen: Date.now() });
+        sessions.set(id, { transport, server, lastSeen: Date.now(), client });
       },
-      ...transportOptions,
     });
     transport.onclose = () => {
       const id = transport.sessionId;
@@ -407,7 +506,7 @@ async function startHttp(selected: string[], port: number): Promise<void> {
     };
 
     await server.connect(transport);
-    await transport.handleRequest(req, res);
+    await transport.handleRequest(req, res, body);
 
     // A request that never completed initialization leaves nothing registered;
     // release its server rather than leaking one per malformed call.
@@ -424,6 +523,7 @@ async function startHttp(selected: string[], port: number): Promise<void> {
     console.error(`Sports Hub HTTP running — ${selected.length} providers on http://${host}:${port}${exposedNote}`);
     console.error(`  POST /mcp     → MCP protocol (Streamable HTTP, ${stateless ? "stateless" : "multi-session"})`);
     console.error(`  GET  /health  → Health check`);
+    console.error(gatewayToken ? "  Gateway auth:    Bearer token required" : `  Gateway auth:    none${loopback ? " (loopback only)" : " — PUBLIC (SPORTS_HUB_ALLOW_PUBLIC=1)"}`);
     if (dnsRebindingProtection) {
       console.error(`  Allowed hosts:   ${allowedHosts.join(", ")}`);
       if (allowedOrigins) console.error(`  Allowed origins: ${allowedOrigins.join(", ")}`);

@@ -5,6 +5,7 @@ import {
   errorResult,
   fetchJsonWithMeta,
   pathSegment,
+  toolResult,
 } from "../shared/http.js";
 
 // ---------------------------------------------------------------------------
@@ -31,7 +32,7 @@ function formatUsageBlock(usage: UsageInfo): string {
   const parts: string[] = [];
   if (usage.requestsUsed !== "unknown") parts.push(`Requests used: ${usage.requestsUsed}`);
   if (usage.requestsRemaining !== "unknown") parts.push(`Requests remaining: ${usage.requestsRemaining}`);
-  return parts.length > 0 ? `\n\n---\nAPI Usage: ${parts.join(" | ")}` : "";
+  return parts.length > 0 ? `API Usage: ${parts.join(" | ")}` : "";
 }
 
 export function register(server: McpServer): void {
@@ -41,21 +42,29 @@ export function register(server: McpServer): void {
   // Used by `odds_check_usage` to avoid burning a request just to read usage.
   let lastUsage: UsageInfo = { requestsRemaining: "unknown", requestsUsed: "unknown" };
 
+  // 500 credits a month: identical calls are served from cache. Live odds and scores move, so 2 min; the sport
+  // list and historical snapshots don't, so 1 h / 24 h.
+  function ttlFor(path: string): number {
+    if (path === "/sports") return 3_600;
+    if (path.startsWith("/historical/")) return 86_400;
+    return 120;
+  }
+
   async function apiRequest(path: string, params: Record<string, string | undefined> = {}) {
     if (!API_KEY) throw new Error("THE_ODDS_API_KEY env var is required. Get a free key at https://the-odds-api.com/");
     const url = buildUrl(`${BASE}${path}`, { apiKey: API_KEY, ...params });
-    const { data, headers } = await fetchJsonWithMeta(url);
+    const { data, headers, cached } = await fetchJsonWithMeta(url, { cacheTtl: ttlFor(path) });
     const usage = readUsage(headers);
-    lastUsage = usage;
-    return { data, usage };
+    if (!cached) lastUsage = usage;
+    return { data, usage: cached ? lastUsage : usage };
   }
 
+  /** Payload first (so the pipeline can project and cap it), usage as a separate advisory block. */
   function oddsResult(data: unknown, usage: UsageInfo) {
-    return {
-      content: [
-        { type: "text" as const, text: JSON.stringify(data, null, 2) + formatUsageBlock(usage) },
-      ],
-    };
+    const result = toolResult(data);
+    const block = formatUsageBlock(usage);
+    if (block) result.content.push({ type: "text" as const, text: block });
+    return result;
   }
 
   // 1. odds_get_sports

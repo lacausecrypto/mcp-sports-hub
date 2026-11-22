@@ -15,12 +15,13 @@ export function register(server: McpServer): void {
   async function callApi(endpoint: string, params: Record<string, string> = {}) {
     if (!API_KEY) throw new Error("CRICKETDATA_API_KEY env var is required. Get a free key at https://cricketdata.org/");
     const url = buildUrl(`${BASE}/${endpoint}`, { apikey: API_KEY, ...params });
-    const json = await fetchJson(url) as Record<string, unknown>;
-    if (json.status === "failure") {
-      throw new Error(`CricketData API failure: ${JSON.stringify(json.info ?? json)}`);
-    }
-    // Strip echoed API key for security
+    const json = await fetchJson(url, { cacheTtl: 300 }) as Record<string, unknown>; // 100 req/day
+    // Strip the echoed API key before anything — the error path included — can serialize the body.
     const { apikey: _key, ...safe } = json;
+    if (safe.status === "failure") {
+      const info = typeof safe.info === "string" ? safe.info : JSON.stringify(safe.info ?? safe);
+      throw new Error(`CricketData API failure: ${info.split(API_KEY).join("[redacted]")}`);
+    }
     return safe;
   }
 

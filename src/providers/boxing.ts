@@ -26,7 +26,7 @@ export function register(server: McpServer): void {
   }
 
   const get = (path: string, params?: Record<string, string | number | undefined>) =>
-    fetchJson(buildUrl(`${BASE}${path}`, params), { headers: headers() });
+    fetchJson(buildUrl(`${BASE}${path}`, params), { headers: headers(), cacheTtl: 21_600 }); // 100 req/month: fighter and bout records change rarely
 
   // 1. fighters — search/list
   server.tool(

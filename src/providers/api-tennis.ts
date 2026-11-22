@@ -27,7 +27,7 @@ export function register(server: McpServer): void {
     if (!API_KEY) return errorResult("API_TENNIS_KEY env var is required");
     try {
       const url = buildUrl(`${API_BASE}/${endpoint}`, params);
-      const data = await fetchJson(url, { headers: headers() });
+      const data = await fetchJson(url, { headers: headers(), cacheTtl: 300 }); // 100 req/day
       return toolResult(data);
     } catch (err) {
       return errorResult(err instanceof Error ? err.message : String(err));

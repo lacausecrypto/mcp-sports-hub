@@ -130,7 +130,7 @@ export function register(server: McpServer): void {
       if (competition_code) {
         path = `/competitions/${pathSegment(competition_code)}/matches`;
       } else if (team_id) {
-        path = `/teams/${team_id}/matches`;
+        path = `/teams/${pathSegment(team_id)}/matches`;
       } else {
         path = "/matches";
       }
@@ -158,7 +158,7 @@ export function register(server: McpServer): void {
       match_id: z.number().describe("The match ID"),
     },
     async ({ match_id }) => {
-      return callApi(`/matches/${match_id}`);
+      return callApi(`/matches/${pathSegment(match_id)}`);
     },
   );
 
@@ -190,7 +190,7 @@ export function register(server: McpServer): void {
       team_id: z.number().describe("The team ID"),
     },
     async ({ team_id }) => {
-      return callApi(`/teams/${team_id}`);
+      return callApi(`/teams/${pathSegment(team_id)}`);
     },
   );
 
@@ -224,7 +224,7 @@ export function register(server: McpServer): void {
       if (dateTo) params.dateTo = dateTo;
       if (status) params.status = status;
       if (competitions) params.competitions = competitions;
-      return callApi(`/teams/${team_id}/matches`, params);
+      return callApi(`/teams/${pathSegment(team_id)}/matches`, params);
     },
   );
 
@@ -261,7 +261,7 @@ export function register(server: McpServer): void {
       person_id: z.number().describe("The person ID"),
     },
     async ({ person_id }) => {
-      return callApi(`/persons/${person_id}`);
+      return callApi(`/persons/${pathSegment(person_id)}`);
     },
   );
 

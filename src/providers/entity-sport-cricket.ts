@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { fetchJson, buildUrl, toolResult, errorResult } from "../shared/http.js";
+import { fetchJson, buildUrl, toolResult, errorResult, pathSegment } from "../shared/http.js";
 
 // ---------------------------------------------------------------------------
 // EntitySport Cricket provider — 12 tools
@@ -91,7 +91,7 @@ export function register(server: McpServer): void {
     },
     async ({ match_id, inning }) => {
       try {
-        const url = apiUrl(`/matches/${encodeURIComponent(match_id)}/innings/${inning}/commentary`);
+        const url = apiUrl(`/matches/${encodeURIComponent(match_id)}/innings/${pathSegment(inning)}/commentary`);
         const data = await fetchJson(url);
         return toolResult(data);
       } catch (err) {

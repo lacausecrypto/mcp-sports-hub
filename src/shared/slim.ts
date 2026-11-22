@@ -44,7 +44,7 @@ export function slimJsonSchema(schema: unknown, depth = 0): unknown {
 }
 
 interface ListToolsResult {
-  tools?: Array<{ inputSchema?: unknown; outputSchema?: unknown }>;
+  tools?: Array<{ inputSchema?: unknown; outputSchema?: unknown; execution?: { taskSupport?: string } }>;
 }
 type Handler = (request: unknown, extra: unknown) => Promise<unknown>;
 
@@ -70,6 +70,9 @@ export function installSchemaSlimming(server: McpServer): boolean {
       for (const tool of result?.tools ?? []) {
         if (tool.inputSchema) slimJsonSchema(tool.inputSchema);
         if (tool.outputSchema) slimJsonSchema(tool.outputSchema);
+        // `{"taskSupport":"forbidden"}` is the spec default: ~38 bytes × every tool for no information.
+        const support = tool.execution?.taskSupport;
+        if (tool.execution && (support === undefined || support === "forbidden")) delete tool.execution;
       }
       return result;
     });

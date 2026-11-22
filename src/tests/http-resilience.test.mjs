@@ -19,9 +19,10 @@ import { fileURLToPath } from "node:url";
 process.env.SPORTS_HUB_RETRY_BASE_MS = "10";
 process.env.SPORTS_HUB_CACHE_TTL = "60";
 process.env.SPORTS_HUB_NEGATIVE_CACHE_TTL = "30";
+process.env.SPORTS_HUB_CACHE_MAX_BYTES = "65536";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const { fetchJson, HttpError } = await import(
+const { fetchJson, fetchJsonWithMeta, HttpError, _cacheStatsForTests } = await import(
   join(__dirname, "..", "..", "dist", "shared", "http.js")
 );
 
@@ -68,15 +69,27 @@ describe("retry", () => {
   });
 
   it("gives up after the retry budget and reports the status", async () => {
-    routes.set("/always-429", (req, res) => {
-      res.writeHead(429);
+    routes.set("/always-503", (req, res) => {
+      res.writeHead(503);
       res.end("nope");
     });
     await assert.rejects(
-      () => fetchJson(`${base}/always-429`, { cacheTtl: 0 }),
+      () => fetchJson(`${base}/always-503`, { cacheTtl: 0 }),
+      (err) => err instanceof HttpError && err.status === 503,
+    );
+    assert.equal(count("/always-503"), 3, "1 attempt + 2 retries");
+  });
+
+  it("does not retry a 429 without Retry-After (exhausted quota)", async () => {
+    routes.set("/quota", (req, res) => {
+      res.writeHead(429);
+      res.end("monthly quota exceeded");
+    });
+    await assert.rejects(
+      () => fetchJson(`${base}/quota`, { cacheTtl: 0 }),
       (err) => err instanceof HttpError && err.status === 429,
     );
-    assert.equal(count("/always-429"), 3, "1 attempt + 2 retries");
+    assert.equal(count("/quota"), 1, "a quota 429 must not be hammered");
   });
 
   it("does not retry a 400", async () => {
@@ -132,5 +145,42 @@ describe("cache isolation", () => {
     const again = await fetchJson(url, { headers: { "x-api-key": "key-a" } });
     assert.equal(again.key, "key-a");
     assert.equal(count("/keyed"), 2, "repeat with the same key should be cached");
+  });
+});
+
+describe("metered calls (fetchJsonWithMeta)", () => {
+  it("caches and coalesces like fetchJson, and keeps the rate-limit headers", async () => {
+    routes.set("/metered", (req, res) => {
+      res.writeHead(200, { "Content-Type": "application/json", "x-requests-remaining": "499" });
+      res.end(JSON.stringify({ odds: [1, 2] }));
+    });
+    const [a, b] = await Promise.all([fetchJsonWithMeta(`${base}/metered`), fetchJsonWithMeta(`${base}/metered`)]);
+    const c = await fetchJsonWithMeta(`${base}/metered`);
+    assert.equal(count("/metered"), 1, "three identical calls, one paid request");
+    assert.deepEqual(a.data, { odds: [1, 2] });
+    assert.equal(b.headers.get("x-requests-remaining"), "499");
+    assert.equal(c.cached, true);
+    assert.equal(c.headers.get("x-requests-remaining"), "499");
+  });
+});
+
+describe("cache byte budget", () => {
+  it("never caches an entry above the per-entry cap and keeps the total under budget", async () => {
+    routes.set("/big", (req, res) => {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ blob: "x".repeat(70_000) }));
+    });
+    await fetchJson(`${base}/big`);
+    await fetchJson(`${base}/big`);
+    assert.equal(count("/big"), 2, "an over-budget payload is not cached");
+    for (let i = 0; i < 40; i++) {
+      routes.set(`/mid${i}`, (req, res) => {
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ blob: "y".repeat(4_000) }));
+      });
+      await fetchJson(`${base}/mid${i}`);
+    }
+    const stats = _cacheStatsForTests();
+    assert.ok(stats.bytes <= stats.maxBytes, `${stats.bytes} <= ${stats.maxBytes}`);
   });
 });

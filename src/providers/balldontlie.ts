@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { fetchJson, buildUrl, toolResult, errorResult } from "../shared/http.js";
+import { fetchJson, buildUrl, toolResult, errorResult, pathSegment } from "../shared/http.js";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -100,7 +100,7 @@ export function register(server: McpServer): void {
       player_id: z.number().describe("The player's unique ID"),
     },
     async ({ sport, player_id }) => {
-      return callApi(sport, `players/${player_id}`);
+      return callApi(sport, `players/${pathSegment(player_id)}`);
     },
   );
 
@@ -153,7 +153,7 @@ export function register(server: McpServer): void {
       game_id: z.number().describe("The game's unique ID"),
     },
     async ({ sport, game_id }) => {
-      return callApi(sport, `games/${game_id}`);
+      return callApi(sport, `games/${pathSegment(game_id)}`);
     },
   );
 

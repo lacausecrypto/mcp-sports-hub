@@ -22,7 +22,7 @@ export function register(server: McpServer): void {
     },
     async ({ username }) => {
       try {
-        const data = await fetchJson(`${BASE}/player/${pathSegment(username.toLowerCase())}`);
+        const data = await fetchJson(`${BASE}/player/${pathSegment(username.toLowerCase())}`, { cacheTtl: 600 });
         return toolResult(data);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
@@ -39,7 +39,7 @@ export function register(server: McpServer): void {
     },
     async ({ username }) => {
       try {
-        const data = await fetchJson(`${BASE}/player/${pathSegment(username.toLowerCase())}/stats`);
+        const data = await fetchJson(`${BASE}/player/${pathSegment(username.toLowerCase())}/stats`, { cacheTtl: 600 });
         return toolResult(data);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
@@ -56,7 +56,7 @@ export function register(server: McpServer): void {
     },
     async ({ username }) => {
       try {
-        const data = await fetchJson(`${BASE}/player/${pathSegment(username.toLowerCase())}/clubs`);
+        const data = await fetchJson(`${BASE}/player/${pathSegment(username.toLowerCase())}/clubs`, { cacheTtl: 600 });
         return toolResult(data);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
@@ -73,7 +73,7 @@ export function register(server: McpServer): void {
     },
     async ({ username }) => {
       try {
-        const data = await fetchJson(`${BASE}/player/${pathSegment(username.toLowerCase())}/games/archives`);
+        const data = await fetchJson(`${BASE}/player/${pathSegment(username.toLowerCase())}/games/archives`, { cacheTtl: 600 });
         return toolResult(data);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
@@ -90,7 +90,7 @@ export function register(server: McpServer): void {
     },
     async ({ club_id }) => {
       try {
-        const data = await fetchJson(`${BASE}/club/${pathSegment(club_id)}`);
+        const data = await fetchJson(`${BASE}/club/${pathSegment(club_id)}`, { cacheTtl: 600 });
         return toolResult(data);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
@@ -107,7 +107,7 @@ export function register(server: McpServer): void {
     },
     async ({ country }) => {
       try {
-        const data = await fetchJson(`${BASE}/country/${pathSegment(country.toUpperCase())}/players`);
+        const data = await fetchJson(`${BASE}/country/${pathSegment(country.toUpperCase())}/players`, { cacheTtl: 600 });
         return toolResult(data);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
@@ -122,7 +122,7 @@ export function register(server: McpServer): void {
     {},
     async () => {
       try {
-        const data = await fetchJson(`${BASE}/leaderboards`);
+        const data = await fetchJson(`${BASE}/leaderboards`, { cacheTtl: 600 });
         return toolResult(data);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));

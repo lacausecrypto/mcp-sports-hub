@@ -193,7 +193,7 @@ export function register(server: McpServer): void {
 
   async function apiRequest(sport: Sport, action: string, params: Record<string, string>) {
     const url = sdBuildUrl(sport, action, params);
-    return fetchJson(url);
+    return fetchJson(url, { cacheTtl: 3_600 }); // 1000 req/month, free-tier data is scrambled anyway
   }
 
   function sdFormatResult(data: unknown): string {

@@ -1,6 +1,6 @@
 {
   "name": "mcp-sports-hub",
-  "version": "1.4.1",
+  "version": "2.0.0",
   "description": "Unified MCP server — 42 sports API providers, 410 tools. Scores, stats, odds, esports, chess, motorsport, boxing, AFL, and more.",
   "mcpName": "io.github.lacausecrypto/sports-hub",
   "type": "module",
@@ -21,9 +21,10 @@
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "npm run build",
     "pretest": "npm run build",
-    "test": "node --test src/tests/smoke.test.mjs src/tests/annotations.test.mjs src/tests/mcp-features.test.mjs src/tests/pipeline.test.mjs src/tests/http-resilience.test.mjs",
+    "test": "node --test src/tests/smoke.test.mjs src/tests/annotations.test.mjs src/tests/mcp-features.test.mjs src/tests/pipeline.test.mjs src/tests/http-resilience.test.mjs src/tests/http-server.test.mjs",
     "test:e2e": "npm run build && node src/tests/e2e.test.mjs",
-    "bundle": "npm run build && npx -y @anthropic-ai/mcpb pack"
+    "bundle": "npm run build && npx -y @anthropic-ai/mcpb pack",
+    "ci:local": "bash scripts/ci-local.sh"
   },
   "keywords": [
     "mcp",
@@ -51,7 +52,7 @@
   ],
   "license": "MIT",
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.0.0"
   },
   "repository": {
     "type": "git",

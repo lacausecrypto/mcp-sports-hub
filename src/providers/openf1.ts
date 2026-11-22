@@ -8,19 +8,29 @@ import { fetchJson, buildUrl, toolResult, errorResult } from "../shared/http.js"
 
 const BASE = "https://api.openf1.org/v1";
 
+/** OpenF1 comparison filters are written `date>=VALUE` — the operator belongs to the key and must stay raw. */
+const COMPARISON_KEY = /^[a-z_]+(?:>=|<=|>|<)$/;
+
+/**
+ * URLSearchParams would encode the key to `date%3E%3D=VALUE`, which OpenF1 answers with 404 "No results found"
+ * (and the negative cache then remembers it). Comparison keys are appended by hand, value encoded, key raw.
+ */
 function openf1Url(
   endpoint: string,
   params?: Record<string, string | number | undefined>,
 ): string {
-  return buildUrl(`${BASE}${endpoint}`, params);
-}
-
-function formatWithWarning(data: unknown, warning?: string) {
-  const text = JSON.stringify(data, null, 2);
-  const prefix = warning ? `${warning}\n\n` : "";
-  return {
-    content: [{ type: "text" as const, text: `${prefix}${text}` }],
-  };
+  const plain: Record<string, string | number | undefined> = {};
+  const comparisons: string[] = [];
+  for (const [key, value] of Object.entries(params ?? {})) {
+    if (COMPARISON_KEY.test(key)) {
+      if (value !== undefined && value !== "") comparisons.push(`${key}${encodeURIComponent(String(value))}`);
+    } else {
+      plain[key] = value;
+    }
+  }
+  const url = buildUrl(`${BASE}${endpoint}`, plain);
+  if (comparisons.length === 0) return url;
+  return `${url}${url.includes("?") ? "&" : "?"}${comparisons.join("&")}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -120,8 +130,8 @@ export function register(server: McpServer): void {
       driver_number: z.number().optional().describe("Filter by driver number (highly recommended)"),
       speed_gte: z.number().optional().describe("Minimum speed in km/h (speed>=value)"),
       speed_lte: z.number().optional().describe("Maximum speed in km/h (speed<=value)"),
-      date_gte: z.string().optional().describe("Start datetime filter (ISO 8601, e.g. '2024-03-02T14:00:00'). Highly recommended to limit data volume."),
-      date_lte: z.string().optional().describe("End datetime filter (ISO 8601, e.g. '2024-03-02T14:00:10'). Highly recommended to limit data volume."),
+      date_gte: z.string().min(1).describe("Window start (ISO 8601, e.g. '2024-03-02T14:00:00'). Required: telemetry is ~4 samples/s per car"),
+      date_lte: z.string().min(1).describe("Window end (ISO 8601, e.g. '2024-03-02T14:00:10'). Keep the window to seconds or minutes"),
     },
     async (params) => {
       try {
@@ -131,17 +141,12 @@ export function register(server: McpServer): void {
         };
         if (params.speed_gte !== undefined) apiParams["speed>="] = params.speed_gte;
         if (params.speed_lte !== undefined) apiParams["speed<="] = params.speed_lte;
-        if (params.date_gte !== undefined) apiParams["date>="] = params.date_gte;
-        if (params.date_lte !== undefined) apiParams["date<="] = params.date_lte;
-
-        const warning =
-          !params.date_gte && !params.date_lte
-            ? "WARNING: No date filters provided. car_data returns very large datasets (multiple samples per second per car). Consider adding date_gte and date_lte to narrow the time window."
-            : undefined;
+        apiParams["date>="] = params.date_gte;
+        apiParams["date<="] = params.date_lte;
 
         const url = openf1Url("/car_data", apiParams);
         const data = await fetchJson(url);
-        return formatWithWarning(data, warning);
+        return toolResult(data);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
       }
