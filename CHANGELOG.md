@@ -2,7 +2,41 @@
 
 All notable changes to this project are documented here. This project follows [semantic versioning](https://semver.org/).
 
-## [Unreleased]
+## [2.0.0] — 2026-11-22
+
+Audit fixes: valid and much smaller tool output, quota protection, and a hardened HTTP mode. Three breaking changes, listed below.
+
+### Fixed
+- **`espn_get_scoreboard` returned invalid JSON.** The size cap halved the list with the most *items*: ESPN nests hundreds of 2-item lists under a 6-item `events`, so the cap shrank those, missed the budget and fell back to a mid-object string cut (NBA/NHL: 40 KB that did not parse; NFL: one team dropped per game). The cap now halves the list that weighs the most in *bytes* (whole items go, kept items stay complete) and never cuts a string: an unshrinkable payload becomes a parseable stub naming its keys.
+- **OpenF1 comparison filters never worked.** `date>=`, `speed<=`, `pit_duration<=`… were URL-encoded into the key (`date%3E%3D=`), which OpenF1 answers with 404 — then negatively cached. They are now sent raw (`date>=<encoded value>`).
+- **`odds_*` (500 credits/month) bypassed cache, coalescing, `fields` and the size cap.** Metered calls are now cached (2 min live, 1 h sport list, 24 h historical) and coalesced; usage moves to a separate content block so the payload is projected and capped like any other.
+- **One client could lock the HTTP server.** 200 `initialize` calls pinned ~1 GB and answered 503 to everyone for 30 min. Idle TTL is now 5 min, a full table evicts the least recently used session, and a gateway can cap sessions per client (`X-Sports-Hub-Client`, trusted only with a token). Non-`initialize` requests without a session are rejected before a server is built.
+- **CricketData** errors could echo the API key back to the model; it is stripped before any serialization.
+- User-supplied path segments are now encoded in OpenLigaDB, Jolpica F1, NHL, football-data.org, BallDontLie, EuroLeague and Entity Sport.
+
+### Changed (breaking)
+- **Public bind is fail-closed.** On a non-loopback `SPORTS_HUB_HOST`, the server exits unless `SPORTS_HUB_GATEWAY_TOKEN` (≥ 32 chars, constant-time Bearer check) or `SPORTS_HUB_ALLOW_PUBLIC=1` is set. `smithery.yaml` sets the latter.
+- **`openf1_get_car_data` requires `date_gte` and `date_lte`.** A whole session is several MB of telemetry.
+- **`espn_get_scoreboard` is compact by default** (no highlights, headlines, leaders, team stats, odds, link sets, calendar): 145 KB → 17 KB for an NBA night, every game kept. `detail: "full"` restores the raw payload.
+- A `429` without `Retry-After` (exhausted quota) is no longer retried.
+
+### Security
+- Transitive dependency advisories resolved (`body-parser` DoS, `@hono/node-server`, `fast-uri`); `npm audit` reports 0.
+
+### Added
+- Cache byte budget (`SPORTS_HUB_CACHE_MAX_BYTES`, 64 MB; entries over 2 MB are not cached) alongside the entry cap.
+- Per-provider TTLs: finished F1 seasons 24 h (current 5 min), golf courses 24 h, boxing and MMA 6 h, SportsDataIO 1 h, Chess.com 10 min, Highlightly 10 min, API-Sports family and CricketData 5 min.
+- Gateway auth (`SPORTS_HUB_GATEWAY_TOKEN`), ported from the private web origin.
+- Host/Origin (DNS-rebinding) checks moved in front of every route, replacing the deprecated SDK transport options.
+- `tools/list` drops the default `execution: {taskSupport: "forbidden"}` block from each tool.
+- 16 tests: real ESPN fixture through the cap, compact scoreboard, metered caching, byte budget, quota 429, HTTP auth/fail-closed/Host/init-only/LRU eviction (208 total).
+
+## [1.4.1] — 2026-10-14
+
+### Security
+- Resolved npm dependency advisories; `npm audit` now gates CI.
+
+## [1.4.0] — 2026-10-14
 
 Context cost and multi-client correctness. No provider or tool was added, removed or renamed.
 

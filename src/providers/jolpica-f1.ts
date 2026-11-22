@@ -16,6 +16,13 @@ function f1Url(path: string, params?: Record<string, string | number | undefined
   return buildUrl(`${BASE}${path}`, params);
 }
 
+/** A finished season never changes: cache it a day. The current one updates after each session: 5 min. */
+function f1Fetch(url: string): Promise<unknown> {
+  const year = Number(/\/f1\/(\d{4})(?:[/.]|$)/.exec(new URL(url).pathname)?.[1]);
+  const finished = Number.isInteger(year) && year < new Date().getUTCFullYear();
+  return fetchJson(url, { cacheTtl: finished ? 86_400 : 300 });
+}
+
 // Shared pagination params
 const PaginationParams = {
   limit: z.number().int().positive().max(1000).optional().describe("Maximum number of results to return (default 30, max 1000)"),
@@ -43,7 +50,7 @@ export function register(server: McpServer): void {
           ? `/f1/${s}/${pathSegment(round)}/results.json`
           : `/f1/${s}/results.json`;
         const url = f1Url(path, { limit, offset });
-        const data = await fetchJson(url);
+        const data = await f1Fetch(url);
         return toolResult(data);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
@@ -67,7 +74,7 @@ export function register(server: McpServer): void {
           ? `/f1/${s}/${pathSegment(round)}/qualifying.json`
           : `/f1/${s}/qualifying.json`;
         const url = f1Url(path, { limit, offset });
-        const data = await fetchJson(url);
+        const data = await f1Fetch(url);
         return toolResult(data);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
@@ -91,7 +98,7 @@ export function register(server: McpServer): void {
           ? `/f1/${s}/${pathSegment(round)}/sprint.json`
           : `/f1/${s}/sprint.json`;
         const url = f1Url(path, { limit, offset });
-        const data = await fetchJson(url);
+        const data = await f1Fetch(url);
         return toolResult(data);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
@@ -111,7 +118,7 @@ export function register(server: McpServer): void {
       try {
         const s = seasonPath(season);
         const url = f1Url(`/f1/${s}/driverStandings.json`, { limit, offset });
-        const data = await fetchJson(url);
+        const data = await f1Fetch(url);
         return toolResult(data);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
@@ -131,7 +138,7 @@ export function register(server: McpServer): void {
       try {
         const s = seasonPath(season);
         const url = f1Url(`/f1/${s}/constructorStandings.json`, { limit, offset });
-        const data = await fetchJson(url);
+        const data = await f1Fetch(url);
         return toolResult(data);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
@@ -151,7 +158,7 @@ export function register(server: McpServer): void {
       try {
         const s = seasonPath(season);
         const url = f1Url(`/f1/${s}.json`, { limit, offset });
-        const data = await fetchJson(url);
+        const data = await f1Fetch(url);
         return toolResult(data);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
@@ -171,7 +178,7 @@ export function register(server: McpServer): void {
       try {
         const s = seasonPath(season);
         const url = f1Url(`/f1/${s}/drivers.json`, { limit, offset });
-        const data = await fetchJson(url);
+        const data = await f1Fetch(url);
         return toolResult(data);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
@@ -191,7 +198,7 @@ export function register(server: McpServer): void {
       try {
         const s = seasonPath(season);
         const url = f1Url(`/f1/${s}/constructors.json`, { limit, offset });
-        const data = await fetchJson(url);
+        const data = await f1Fetch(url);
         return toolResult(data);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
@@ -211,7 +218,7 @@ export function register(server: McpServer): void {
       try {
         const s = seasonPath(season);
         const url = f1Url(`/f1/${s}/circuits.json`, { limit, offset });
-        const data = await fetchJson(url);
+        const data = await f1Fetch(url);
         return toolResult(data);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
@@ -232,10 +239,10 @@ export function register(server: McpServer): void {
     async ({ season, round, lap, limit, offset }) => {
       try {
         const path = lap
-          ? `/f1/${season}/${pathSegment(round)}/laps/${lap}.json`
-          : `/f1/${season}/${pathSegment(round)}/laps.json`;
+          ? `/f1/${pathSegment(season)}/${pathSegment(round)}/laps/${pathSegment(lap)}.json`
+          : `/f1/${pathSegment(season)}/${pathSegment(round)}/laps.json`;
         const url = f1Url(path, { limit, offset });
-        const data = await fetchJson(url);
+        const data = await f1Fetch(url);
         return toolResult(data);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
@@ -256,10 +263,10 @@ export function register(server: McpServer): void {
     async ({ season, round, stop, limit, offset }) => {
       try {
         const path = stop
-          ? `/f1/${season}/${pathSegment(round)}/pitstops/${stop}.json`
-          : `/f1/${season}/${pathSegment(round)}/pitstops.json`;
+          ? `/f1/${pathSegment(season)}/${pathSegment(round)}/pitstops/${pathSegment(stop)}.json`
+          : `/f1/${pathSegment(season)}/${pathSegment(round)}/pitstops.json`;
         const url = f1Url(path, { limit, offset });
-        const data = await fetchJson(url);
+        const data = await f1Fetch(url);
         return toolResult(data);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
@@ -277,7 +284,7 @@ export function register(server: McpServer): void {
     async ({ limit, offset }) => {
       try {
         const url = f1Url("/f1/seasons.json", { limit, offset });
-        const data = await fetchJson(url);
+        const data = await f1Fetch(url);
         return toolResult(data);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
@@ -298,7 +305,7 @@ export function register(server: McpServer): void {
       try {
         const s = seasonPath(season);
         const url = f1Url(`/f1/${s}/drivers/${pathSegment(driver_id)}/results.json`, { limit, offset });
-        const data = await fetchJson(url);
+        const data = await f1Fetch(url);
         return toolResult(data);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));

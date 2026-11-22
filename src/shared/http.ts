@@ -18,6 +18,8 @@ export interface FetchJsonResult {
   data: unknown;
   headers: Headers;
   status: number;
+  /** True when served from the in-memory cache (headers are those of the original response). */
+  cached: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -27,6 +29,7 @@ export interface FetchJsonResult {
 interface CacheEntry {
   data: unknown;
   expiresAt: number;
+  bytes: number;
 }
 
 interface NegativeEntry {
@@ -36,6 +39,10 @@ interface NegativeEntry {
 
 const DEFAULT_CACHE_TTL = clampInt(process.env.SPORTS_HUB_CACHE_TTL, 60, 0, 86_400);
 const MAX_CACHE_ENTRIES = clampInt(process.env.SPORTS_HUB_CACHE_MAX, 500, 1, 100_000);
+/** Total size budget of the cache (serialized bytes). Entry count alone let a few multi-MB payloads eat the heap. */
+const MAX_CACHE_BYTES = clampInt(process.env.SPORTS_HUB_CACHE_MAX_BYTES, 64 * 1024 * 1024, 1024, 2 ** 31 - 1);
+/** Payloads above this are never cached: one telemetry dump must not evict hundreds of small entries. */
+const MAX_CACHE_ENTRY_BYTES = Math.min(2 * 1024 * 1024, MAX_CACHE_BYTES);
 const DEFAULT_TIMEOUT_MS = clampInt(process.env.SPORTS_HUB_HTTP_TIMEOUT_MS, 15_000, 1_000, 600_000);
 /** How long a 404/410 is remembered, so a wrong ID doesn't re-hit upstream in a loop. */
 const NEGATIVE_CACHE_TTL = clampInt(process.env.SPORTS_HUB_NEGATIVE_CACHE_TTL, 30, 0, 3_600);
@@ -55,6 +62,7 @@ export const MAX_RESULT_BYTES = clampInt(
 
 // Map preserves insertion order — re-inserting on read gives us LRU semantics.
 const cache = new Map<string, CacheEntry>();
+let cacheBytes = 0;
 const negativeCache = new Map<string, NegativeEntry>();
 /** Requests currently in flight, keyed like the cache: collapses duplicate concurrent calls. */
 const inFlight = new Map<string, Promise<unknown>>();
@@ -70,7 +78,7 @@ function getCached(key: string): unknown | undefined {
   const entry = cache.get(key);
   if (!entry) return undefined;
   if (Date.now() > entry.expiresAt) {
-    cache.delete(key);
+    dropCached(key);
     return undefined;
   }
   // Refresh insertion order so it's the most-recently-used.
@@ -79,13 +87,33 @@ function getCached(key: string): unknown | undefined {
   return entry.data;
 }
 
+function dropCached(key: string): void {
+  const entry = cache.get(key);
+  if (!entry) return;
+  cacheBytes -= entry.bytes;
+  cache.delete(key);
+}
+
+function sizeOf(data: unknown): number {
+  if (typeof data === "string") return data.length;
+  try {
+    return (JSON.stringify(data) ?? "").length;
+  } catch {
+    return Number.POSITIVE_INFINITY; // Unserializable: never cache it.
+  }
+}
+
 function setCache(key: string, data: unknown, ttl: number): void {
-  cache.set(key, { data, expiresAt: Date.now() + ttl * 1000 });
-  // Hard cap: drop oldest entries (insertion order) until we're under the limit.
-  while (cache.size > MAX_CACHE_ENTRIES) {
+  const bytes = sizeOf(data);
+  dropCached(key);
+  if (bytes > MAX_CACHE_ENTRY_BYTES) return;
+  cache.set(key, { data, expiresAt: Date.now() + ttl * 1000, bytes });
+  cacheBytes += bytes;
+  // Hard caps: drop least-recently-used entries until both count and bytes fit.
+  while (cache.size > MAX_CACHE_ENTRIES || cacheBytes > MAX_CACHE_BYTES) {
     const oldest = cache.keys().next().value;
     if (oldest === undefined) break;
-    cache.delete(oldest);
+    dropCached(oldest);
   }
 }
 
@@ -131,8 +159,8 @@ function cacheKeyFor(prefix: string, method: string, url: string, headers?: Reco
 }
 
 /** Test/diagnostic helper. Not exported in the README API. */
-export function _cacheStatsForTests(): { size: number; max: number; negative: number; inFlight: number } {
-  return { size: cache.size, max: MAX_CACHE_ENTRIES, negative: negativeCache.size, inFlight: inFlight.size };
+export function _cacheStatsForTests(): { size: number; max: number; bytes: number; maxBytes: number; negative: number; inFlight: number } {
+  return { size: cache.size, max: MAX_CACHE_ENTRIES, bytes: cacheBytes, maxBytes: MAX_CACHE_BYTES, negative: negativeCache.size, inFlight: inFlight.size };
 }
 
 // ---------------------------------------------------------------------------
@@ -181,9 +209,12 @@ async function rawFetch(url: string, options: HttpOptions): Promise<Response> {
 
     if (response.ok) return response;
 
-    const shouldRetry = attempt < MAX_RETRIES && RETRYABLE_STATUS.has(response.status);
+    const advised = retryAfterMs(response.headers.get("retry-after"));
+    // A 429 without Retry-After is usually an exhausted daily/monthly quota: retrying only burns latency (and,
+    // on some providers, more quota). Retry it only when the server says when.
+    const retryable = RETRYABLE_STATUS.has(response.status) && (response.status !== 429 || advised !== undefined);
+    const shouldRetry = attempt < MAX_RETRIES && retryable;
     if (shouldRetry) {
-      const advised = retryAfterMs(response.headers.get("retry-after"));
       if (advised === undefined || advised <= MAX_RETRY_AFTER_MS) {
         const backoff = RETRY_BASE_MS * 2 ** attempt + Math.floor(Math.random() * RETRY_BASE_MS);
         await response.body?.cancel().catch(() => {});
@@ -254,17 +285,33 @@ export async function fetchJson(
 }
 
 /**
- * Like fetchJson but also returns response headers and status. NEVER cached —
- * intended for callers that need to read rate-limit headers (e.g. The Odds API).
- * Such callers should implement their own caching if needed.
+ * Like fetchJson but also returns response headers and status, for callers that read rate-limit headers
+ * (e.g. The Odds API). Cached and coalesced like fetchJson: on quota-metered APIs a repeated identical call
+ * must not cost a second credit. A cached hit returns the headers of the response that filled the cache.
  */
 export async function fetchJsonWithMeta(
   url: string,
   options: HttpOptions = {},
 ): Promise<FetchJsonResult> {
-  const response = await rawFetch(url, options);
-  const data = await response.json();
-  return { data, headers: response.headers, status: response.status };
+  const method = options.method ?? "GET";
+  const ttl = options.cacheTtl ?? (method === "GET" ? DEFAULT_CACHE_TTL : 0);
+  const cacheKey = cacheKeyFor("META:", method, url, options.headers);
+  type Stored = { data: unknown; headers: [string, string][]; status: number };
+  const revive = (stored: Stored, cached: boolean): FetchJsonResult =>
+    ({ data: stored.data, headers: new Headers(stored.headers), status: stored.status, cached });
+
+  if (ttl > 0) {
+    const cached = getCached(cacheKey) as Stored | undefined;
+    if (cached !== undefined) return revive(cached, true);
+  }
+
+  const stored = await withCoalescing(cacheKey, async (): Promise<Stored> => {
+    const response = await rawFetch(url, options);
+    const value: Stored = { data: await response.json(), headers: [...response.headers.entries()], status: response.status };
+    if (ttl > 0) setCache(cacheKey, value, ttl);
+    return value;
+  });
+  return revive(stored, false);
 }
 
 /**

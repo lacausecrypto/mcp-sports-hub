@@ -176,3 +176,55 @@ describe("tool pipeline", () => {
     assert.equal(out.content[0].text, '{"a":1,"b":[1,2]}', "no pretty-printing on the wire");
   });
 });
+
+const { readFileSync } = await import("node:fs");
+describe("truncation keeps JSON valid on real nested payloads", () => {
+  const espn = JSON.parse(readFileSync(join(__dirname, "fixtures", "espn-nba-scoreboard.json"), "utf8"));
+
+  it("a raw ESPN NBA scoreboard (~145 KB, 400+ small lists) comes back parseable with complete games", async () => {
+    const { call } = harness("espn_like", async () => toolResult(espn));
+    const res = await call();
+    const text = res.content[0].text;
+    assert.ok(text.length <= MAX_RESULT_BYTES, `within budget (${text.length})`);
+    const parsed = JSON.parse(text);
+    assert.ok(parsed.events.length >= 1);
+    for (const event of parsed.events) assert.equal(event.competitions[0].competitors.length, 2, "both teams of every kept game");
+    assert.match(res.content.at(-1).text, /Truncated to fit/);
+  });
+
+  it("a payload with no list to shrink becomes a parseable stub, never a cut string", async () => {
+    const { call } = harness("blob", async () => toolResult({ blob: "x".repeat(MAX_RESULT_BYTES * 2) }));
+    const res = await call();
+    const parsed = JSON.parse(res.content[0].text);
+    assert.equal(parsed.truncated, true);
+    assert.deepEqual(parsed.topLevelKeys, ["blob"]);
+  });
+
+  it("provider advisory blocks after the payload survive the pipeline", async () => {
+    const { call } = harness("with_usage", async () => ({ content: [...toolResult({ a: 1 }).content, { type: "text", text: "API Usage: 3 used" }] }));
+    const res = await call();
+    assert.ok(res.content.some((block) => block.text === "API Usage: 3 used"));
+  });
+});
+
+describe("ESPN compact scoreboard", async () => {
+  const { compactScoreboard } = await import(join(__dirname, "..", "..", "dist", "providers", "espn.js"));
+  const espn = JSON.parse(readFileSync(join(__dirname, "fixtures", "espn-nba-scoreboard.json"), "utf8"));
+
+  it("keeps every game, both teams, scores and status, at a fraction of the size", () => {
+    const compact = compactScoreboard(espn);
+    assert.equal(compact.events.length, espn.events.length);
+    for (const [i, event] of compact.events.entries()) {
+      const competitors = event.competitions[0].competitors;
+      assert.equal(competitors.length, 2);
+      assert.equal(competitors[0].score, espn.events[i].competitions[0].competitors[0].score);
+      assert.ok(competitors[0].team.abbreviation);
+      assert.deepEqual(event.status, espn.events[i].status);
+      assert.equal(event.competitions[0].highlights, undefined);
+      assert.equal(competitors[0].leaders, undefined);
+    }
+    const ratio = JSON.stringify(compact).length / JSON.stringify(espn).length;
+    assert.ok(ratio < 0.3, `compact is ${Math.round(ratio * 100)} % of raw`);
+    assert.ok(JSON.stringify(compact).length <= MAX_RESULT_BYTES, "a full NBA slate fits the budget untruncated");
+  });
+});

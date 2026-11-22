@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { buildUrl, fetchJson, safe, toolResult } from "../shared/http.js";
+import { buildUrl, fetchJson, safe, toolResult, pathSegment } from "../shared/http.js";
 
 // ---------------------------------------------------------------------------
 // EuroLeague / EuroCup (Euroleague Basketball official feeds) — 6 tools
@@ -27,7 +27,7 @@ export function register(server: McpServer): void {
     "Get all EuroLeague/EuroCup games for a season (teams, scores, dates, round, status).",
     { competition, season_year: seasonYear },
     safe(async ({ competition, season_year }) =>
-      toolResult(await fetchJson(`${V2}/competitions/${competition}/seasons/${seasonCode(competition, season_year)}/games`)),
+      toolResult(await fetchJson(`${V2}/competitions/${pathSegment(competition)}/seasons/${seasonCode(competition, season_year)}/games`)),
     ),
   );
 
@@ -37,7 +37,7 @@ export function register(server: McpServer): void {
     "List the clubs participating in a EuroLeague/EuroCup season (names, codes, venues, country).",
     { competition, season_year: seasonYear },
     safe(async ({ competition, season_year }) =>
-      toolResult(await fetchJson(`${V2}/competitions/${competition}/seasons/${seasonCode(competition, season_year)}/clubs`)),
+      toolResult(await fetchJson(`${V2}/competitions/${pathSegment(competition)}/seasons/${seasonCode(competition, season_year)}/clubs`)),
     ),
   );
 
@@ -47,7 +47,7 @@ export function register(server: McpServer): void {
     "List the rounds (game days) of a EuroLeague/EuroCup season.",
     { competition, season_year: seasonYear },
     safe(async ({ competition, season_year }) =>
-      toolResult(await fetchJson(`${V2}/competitions/${competition}/seasons/${seasonCode(competition, season_year)}/rounds`)),
+      toolResult(await fetchJson(`${V2}/competitions/${pathSegment(competition)}/seasons/${seasonCode(competition, season_year)}/rounds`)),
     ),
   );
 

@@ -29,7 +29,7 @@ export function register(server: McpServer): void {
   }
 
   const get = (sportPath: string, endpoint: string, params?: Record<string, string | number | undefined>) =>
-    fetchJson(buildUrl(`${BASE}/${pathSegment(sportPath)}/${endpoint}`, params), { headers: headers() });
+    fetchJson(buildUrl(`${BASE}/${pathSegment(sportPath)}/${endpoint}`, params), { headers: headers(), cacheTtl: 600 }); // 100 req/day
 
   // 1. leagues
   server.tool(

@@ -112,54 +112,70 @@ function collectArrays(node: unknown, out: unknown[][] = [], depth = 0): unknown
   return out;
 }
 
+/** Serialized length of `node`, recording every array with its own serialized length. O(n), no string building. */
+function measure(node: unknown, out: Array<{ list: unknown[]; bytes: number }>, depth = 0): number {
+  if (node === null || typeof node !== "object" || depth > 40) return (JSON.stringify(node) ?? "null").length;
+  if (Array.isArray(node)) {
+    let bytes = 2 + Math.max(0, node.length - 1);
+    for (const item of node) bytes += measure(item, out, depth + 1);
+    out.push({ list: node, bytes });
+    return bytes;
+  }
+  let bytes = 2;
+  let first = true;
+  for (const [key, value] of Object.entries(node as Record<string, unknown>)) {
+    if (value === undefined || typeof value === "function") continue;
+    bytes += (first ? 0 : 1) + JSON.stringify(key).length + 1 + measure(value, out, depth + 1);
+    first = false;
+  }
+  return bytes;
+}
+
 /**
- * Serialize within budget.
+ * Serialize within budget, always as valid JSON.
  *
- * These payloads are almost always "one big list wrapped in envelopes"
- * (ESPN nests 30 teams under sports[].leagues[].teams[]), so we shrink the
- * longest list repeatedly rather than cutting the string. That keeps the
- * result parseable, which a mid-object cut would not. String truncation is
- * only the last resort for a payload with no list to shrink.
+ * Each pass halves the list that weighs the most in bytes (not the one with the most items: ESPN nests hundreds
+ * of 2-item lists — linescores, competitors — under a 6-item `events`, and halving those first dropped one team
+ * of every game while barely shrinking the payload). The heaviest list is in practice the main result list, so
+ * whole items go and the ones kept stay complete. A payload with no list left to shrink is replaced by a
+ * parseable stub naming its keys — never a mid-object string cut.
  */
 function serializeCapped(payload: unknown): { text: string; note?: string } {
   let text = JSON.stringify(payload) ?? "null";
   if (text.length <= MAX_RESULT_BYTES) return { text };
 
+  const keys = topLevelKeys(payload);
+  const hint = `Pass "fields" to keep only the keys you need` +
+    (keys.length > 0 ? ` (top-level keys: ${keys.slice(0, 25).join(", ")})` : "") + `, or narrow the query.`;
+
   let working: unknown;
   try {
     working = structuredClone(payload);
   } catch {
-    working = undefined; // Non-cloneable payload — fall through to string cut.
+    working = undefined;
   }
 
   if (working !== undefined) {
     const originalCount = collectArrays(payload).reduce((n, a) => n + a.length, 0);
-    for (let pass = 0; pass < 64; pass++) {
-      const arrays = collectArrays(working).filter((a) => a.length > 0);
-      if (arrays.length === 0) break;
-      const biggest = arrays.reduce((a, b) => (b.length > a.length ? b : a));
-      biggest.length = Math.max(0, Math.floor(biggest.length / 2));
-      text = JSON.stringify(working);
-      if (text.length <= MAX_RESULT_BYTES) {
-        const kept = collectArrays(working).reduce((n, a) => n + a.length, 0);
-        return {
-          text,
-          note:
-            `Truncated to fit ${MAX_RESULT_BYTES} bytes: ${kept} of ${originalCount} list items shown. ` +
-            `Pass "fields" to keep only the keys you need, or narrow the query.`,
-        };
-      }
+    for (let pass = 0; pass < 256; pass++) {
+      const lists: Array<{ list: unknown[]; bytes: number }> = [];
+      if (measure(working, lists) <= MAX_RESULT_BYTES) break;
+      const pool = lists.filter((entry) => entry.list.length > 1);
+      const candidates = pool.length > 0 ? pool : lists.filter((entry) => entry.list.length === 1);
+      if (candidates.length === 0) break;
+      const heaviest = candidates.reduce((a, b) => (b.bytes > a.bytes ? b : a));
+      heaviest.list.length = Math.floor(heaviest.list.length / 2);
+    }
+    text = JSON.stringify(working) ?? "null";
+    if (text.length <= MAX_RESULT_BYTES) {
+      const kept = collectArrays(working).reduce((n, a) => n + a.length, 0);
+      return { text, note: `Truncated to fit ${MAX_RESULT_BYTES} bytes: ${kept} of ${originalCount} list items shown (whole items dropped from the largest lists). ${hint}` };
     }
   }
 
-  const keys = topLevelKeys(payload);
   return {
-    text: JSON.stringify(payload).slice(0, MAX_RESULT_BYTES),
-    note:
-      `Truncated at ${MAX_RESULT_BYTES} bytes — the JSON above is incomplete and will not parse. ` +
-      `Re-run with "fields" to keep only what you need` +
-      (keys.length > 0 ? ` (available top-level keys: ${keys.slice(0, 25).join(", ")})` : "") +
-      `, or narrow the query.`,
+    text: JSON.stringify({ truncated: true, bytes: (JSON.stringify(payload) ?? "").length, topLevelKeys: keys.slice(0, 60) }),
+    note: `The response (${MAX_RESULT_BYTES}+ bytes) could not be shrunk into a valid excerpt. ${hint}`,
   };
 }
 
@@ -220,7 +236,9 @@ function shapeResult(result: ToolResult, fields: string | undefined, toolName: s
     );
   }
 
-  const content: Array<{ type: string; text: string }> = [{ type: "text", text }];
+  // Blocks after the first are provider advisories (quota usage, warnings): kept as they are.
+  const extra = (result.content ?? []).slice(1) as Array<{ type: string; text: string }>;
+  const content: Array<{ type: string; text: string }> = [{ type: "text", text }, ...extra];
   if (notes.length > 0) content.push({ type: "text", text: `[sports-hub] ${notes.join(" ")}` });
   return { content };
 }

@@ -23,10 +23,12 @@ startCommand:
 # so the image stays generic — stdio by default, HTTP only on Smithery.
 #  - SPORTS_HUB_HTTP=1                         enable Streamable HTTP transport
 #  - SPORTS_HUB_HOST=0.0.0.0                   bind all interfaces in-container
+#  - SPORTS_HUB_ALLOW_PUBLIC=1                 intentionally public, keyless (no gateway token)
 #  - SPORTS_HUB_PROVIDERS=free                 keyless providers only
 #  - SPORTS_HUB_DNS_REBINDING_PROTECTION=0     accept Smithery's proxied Host
 env:
   SPORTS_HUB_HTTP: "1"
   SPORTS_HUB_HOST: "0.0.0.0"
+  SPORTS_HUB_ALLOW_PUBLIC: "1"
   SPORTS_HUB_PROVIDERS: "free"
   SPORTS_HUB_DNS_REBINDING_PROTECTION: "0"

@@ -183,21 +183,24 @@ SPORTS_HUB_HTTP=1 SPORTS_HUB_PORT=3000 npx mcp-sports-hub
 
 Endpoints:
 - `POST /mcp` — MCP protocol (Streamable HTTP with SSE)
-- `GET /health` — Health check (`{"status":"ok","providers":19,"sessions":0,"mode":"session"}`)
+- `GET /health` — Health check (`{"status":"ok","providers":19,"sessions":0,"mode":"session"}`; behind the token when one is set)
 
 Supports CORS and multi-client session management via the `mcp-session-id` header. Default port: 3000.
 
-Each client gets its own session, created on `initialize` and addressed afterwards by its session id. Building a session costs ~90 ms for the 165-tool `free` preset, paid once per client rather than per request. Idle sessions are reaped.
+Each client gets its own session, created on `initialize` (and only on `initialize`) and addressed afterwards by its session id. Building a session costs ~90 ms and ~4 MB for the 165-tool `free` preset, paid once per client rather than per request. Idle sessions are reaped; a full table evicts the least recently used session instead of refusing new clients.
 
 ```bash
-SPORTS_HUB_MAX_SESSIONS=200   # concurrent sessions before new ones get a 503
-SPORTS_HUB_SESSION_TTL=1800   # seconds a session may sit idle
-SPORTS_HUB_STATELESS=1        # opt out: build a throwaway server per request
+SPORTS_HUB_MAX_SESSIONS=200            # concurrent sessions; the LRU one is evicted beyond this
+SPORTS_HUB_SESSION_TTL=300             # seconds a session may sit idle
+SPORTS_HUB_GATEWAY_TOKEN=<32+ chars>   # require "Authorization: Bearer <token>" on every request
+SPORTS_HUB_MAX_SESSIONS_PER_CLIENT=8   # with a token: cap per X-Sports-Hub-Client id sent by your gateway
+SPORTS_HUB_CACHE_MAX_BYTES=67108864    # response cache budget in bytes (entries over 2 MB are never cached)
+SPORTS_HUB_STATELESS=1                 # opt out: build a throwaway server per request
 ```
 
 `SPORTS_HUB_STATELESS=1` suits several replicas behind a load balancer with no sticky routing. It pays the build cost on every call, so prefer sessions for a single instance.
 
-> **⚠ Security**: HTTP mode binds to `127.0.0.1` (loopback) by default. Setting `SPORTS_HUB_HOST=0.0.0.0` exposes an **unauthenticated** MCP endpoint to your whole network — anyone who can reach it can use your configured API keys. DNS-rebinding protection only blocks browser-origin attacks, not direct clients. Only expose it behind a reverse proxy with auth/TLS. `SPORTS_HUB_CORS_ORIGINS` must list explicit origins (a literal `*` is rejected).
+> **⚠ Security**: HTTP mode binds to `127.0.0.1` (loopback) by default. On any other host the server **refuses to start** without `SPORTS_HUB_GATEWAY_TOKEN` (anyone who can reach it could use your configured API keys); set `SPORTS_HUB_ALLOW_PUBLIC=1` only for a deliberately public, keyless endpoint. DNS-rebinding protection (Host/Origin checks, on every route) only blocks browser-origin attacks, not direct clients. Put TLS in front. `SPORTS_HUB_CORS_ORIGINS` must list explicit origins (a literal `*` is rejected).
 
 ### Hosted (Smithery)
 

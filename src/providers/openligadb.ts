@@ -206,7 +206,7 @@ export function register(server: McpServer): void {
     },
     async ({ league_shortcut, season }) => {
       try {
-        const data = await fetchJson(`${BASE}/getmatchdata/${league_shortcut}/${season}`);
+        const data = await fetchJson(`${BASE}/getmatchdata/${pathSegment(league_shortcut)}/${pathSegment(season)}`);
         return textResult(formatMatches(data));
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
@@ -226,7 +226,7 @@ export function register(server: McpServer): void {
     async ({ league_shortcut, season, matchday }) => {
       try {
         const data = await fetchJson(
-          `${BASE}/getmatchdata/${league_shortcut}/${season}/${matchday}`,
+          `${BASE}/getmatchdata/${pathSegment(league_shortcut)}/${pathSegment(season)}/${pathSegment(matchday)}`,
         );
         return textResult(formatMatches(data));
       } catch (err) {

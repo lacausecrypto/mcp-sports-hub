@@ -34,6 +34,36 @@ const LeagueParam = z
   );
 
 // ---------------------------------------------------------------------------
+// Compact scoreboard
+// ---------------------------------------------------------------------------
+
+type Json = Record<string, unknown>;
+const isObject = (value: unknown): value is Json => value !== null && typeof value === "object" && !Array.isArray(value);
+const objects = (value: unknown): Json[] => (Array.isArray(value) ? value.filter(isObject) : []);
+
+/**
+ * ESPN scoreboards weigh ~23 KB per game, three quarters of it editorial extras (video highlights, article
+ * headlines, leaders, season stats, odds, geo broadcast lists, link sets, the league calendar). The default
+ * "compact" view drops those so a full slate fits the result budget intact; detail "full" keeps everything.
+ */
+export function compactScoreboard(data: unknown): unknown {
+  if (!isObject(data)) return data;
+  const leagues = objects(data.leagues).map(({ calendar: _calendar, logos: _logos, links: _links, ...league }) => league);
+  const events = objects(data.events).map(({ links: _links, ...event }) => ({
+    ...event,
+    // competition.status repeats event.status (plus featured athletes, ~5 KB in the NHL).
+    competitions: objects(event.competitions).map(({ highlights: _h, headlines: _hl, geoBroadcasts: _g, tickets: _t, leaders: _cl, odds: _o, status: _st, ...competition }) => ({
+      ...competition,
+      competitors: objects(competition.competitors).map(({ leaders: _l, statistics: _s, team, ...competitor }) => ({
+        ...competitor,
+        team: isObject(team) ? (({ links: _tl, ...rest }) => rest)(team) : team,
+      })),
+    })),
+  }));
+  return { ...data, leagues, events };
+}
+
+// ---------------------------------------------------------------------------
 // Register
 // ---------------------------------------------------------------------------
 
@@ -55,15 +85,19 @@ export function register(server: McpServer): void {
         .positive()
         .optional()
         .describe("Maximum number of events to return"),
+      detail: z
+        .enum(["compact", "full"])
+        .optional()
+        .describe('"compact" (default): scores, status, teams, venue, broadcasts. "full": adds highlights, headlines, leaders, team stats, odds (~4x larger; for odds prefer odds_* tools)'),
     },
-    async ({ sport, league, dates, limit }) => {
+    async ({ sport, league, dates, limit, detail }) => {
       try {
         const url = espnUrl(sport, league, "scoreboard", {
           dates,
           limit: limit?.toString(),
         });
         const data = await fetchJson(url);
-        return toolResult(data);
+        return toolResult(detail === "full" ? data : compactScoreboard(data));
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
       return errorResult(`[ESPN — unofficial API] ${msg}. If ESPN is down, try: sportsdb_search_teams, bdl_get_games, or apisports_get_fixtures as alternatives.`);

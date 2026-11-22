@@ -36,7 +36,7 @@ export function register(server: McpServer): void {
     async ({ search, country, state, limit }) => {
       try {
         const url = buildUrl(`${BASE}/courses/search`, { search, country, state, limit });
-        const data = await fetchJson(url, { headers: authHeaders() });
+        const data = await fetchJson(url, { headers: authHeaders(), cacheTtl: 86_400 });
         return toolResult(data);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
@@ -54,7 +54,7 @@ export function register(server: McpServer): void {
     async ({ course_id }) => {
       try {
         const url = `${BASE}/courses/${encodeURIComponent(course_id)}`;
-        const data = await fetchJson(url, { headers: authHeaders() });
+        const data = await fetchJson(url, { headers: authHeaders(), cacheTtl: 86_400 });
         return toolResult(data);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
@@ -74,7 +74,7 @@ export function register(server: McpServer): void {
     async ({ lat, lng, radius }) => {
       try {
         const url = buildUrl(`${BASE}/courses/nearby`, { lat, lng, radius });
-        const data = await fetchJson(url, { headers: authHeaders() });
+        const data = await fetchJson(url, { headers: authHeaders(), cacheTtl: 86_400 });
         return toolResult(data);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
@@ -89,7 +89,7 @@ export function register(server: McpServer): void {
     {},
     async () => {
       try {
-        const data = await fetchJson(`${BASE}/countries`, { headers: authHeaders() });
+        const data = await fetchJson(`${BASE}/countries`, { headers: authHeaders(), cacheTtl: 86_400 });
         return toolResult(data);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
@@ -107,7 +107,7 @@ export function register(server: McpServer): void {
     async ({ country_code }) => {
       try {
         const url = `${BASE}/countries/${encodeURIComponent(country_code)}/states`;
-        const data = await fetchJson(url, { headers: authHeaders() });
+        const data = await fetchJson(url, { headers: authHeaders(), cacheTtl: 86_400 });
         return toolResult(data);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
@@ -125,7 +125,7 @@ export function register(server: McpServer): void {
     async ({ course_id }) => {
       try {
         const url = `${BASE}/courses/${encodeURIComponent(course_id)}/reviews`;
-        const data = await fetchJson(url, { headers: authHeaders() });
+        const data = await fetchJson(url, { headers: authHeaders(), cacheTtl: 86_400 });
         return toolResult(data);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));

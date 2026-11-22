@@ -15,7 +15,8 @@ export function register(server: McpServer): void {
   async function apiRequest(path: string, params?: Record<string, string | number | undefined>) {
     if (!API_KEY) throw new Error("FIGHTING_TOMATOES_API_KEY env var is required. Get your free API key at https://fightingtomatoes.com/API");
     const url = buildUrl(`${BASE}/${path.replace(/^\//, "")}`, params);
-    return fetchJson(url, { headers: { Authorization: `Bearer ${API_KEY}` } });
+    // 200 req/month and fight history is historical: 6 h.
+    return fetchJson(url, { headers: { Authorization: `Bearer ${API_KEY}` }, cacheTtl: 21_600 });
   }
 
   // 1. mma_search_fighters

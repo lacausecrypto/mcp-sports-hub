@@ -44,7 +44,7 @@ export function register(server: McpServer): void {
     async ({ date }) => {
       try {
         const d = date ?? todayISO();
-        const data = await fetchJson(`${BASE}/schedule/${d}`);
+        const data = await fetchJson(`${BASE}/schedule/${pathSegment(d)}`);
         return toolResult(data);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
@@ -107,7 +107,7 @@ export function register(server: McpServer): void {
     },
     async ({ game_id }) => {
       try {
-        const data = await fetchJson(`${BASE}/gamecenter/${game_id}/boxscore`);
+        const data = await fetchJson(`${BASE}/gamecenter/${pathSegment(game_id)}/boxscore`);
         return toolResult(data);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
@@ -127,7 +127,7 @@ export function register(server: McpServer): void {
     },
     async ({ game_id }) => {
       try {
-        const data = await fetchJson(`${BASE}/gamecenter/${game_id}/play-by-play`);
+        const data = await fetchJson(`${BASE}/gamecenter/${pathSegment(game_id)}/play-by-play`);
         return toolResult(data);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
@@ -147,7 +147,7 @@ export function register(server: McpServer): void {
     },
     async ({ game_id }) => {
       try {
-        const data = await fetchJson(`${BASE}/gamecenter/${game_id}/landing`);
+        const data = await fetchJson(`${BASE}/gamecenter/${pathSegment(game_id)}/landing`);
         return toolResult(data);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
@@ -246,7 +246,7 @@ export function register(server: McpServer): void {
     },
     async ({ player_id }) => {
       try {
-        const data = await fetchJson(`${BASE}/player/${player_id}/landing`);
+        const data = await fetchJson(`${BASE}/player/${pathSegment(player_id)}/landing`);
         return toolResult(data);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
@@ -280,7 +280,7 @@ export function register(server: McpServer): void {
       try {
         const s = season ?? currentSeasonTag();
         const gt = game_type ?? 2;
-        const data = await fetchJson(`${BASE}/player/${player_id}/game-log/${pathSegment(s)}/${gt}`);
+        const data = await fetchJson(`${BASE}/player/${pathSegment(player_id)}/game-log/${pathSegment(s)}/${gt}`);
         return toolResult(data);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
