@@ -1,0 +1,28 @@
+name: Dependency security validation
+on:
+  push:
+    branches: [main, security/dependency-audit-2026-10]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Reproduce lockfile installation
+        run: npm ci
+      - name: Audit installed dependencies
+        run: npm audit --audit-level=low
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Full test suite
+        run: npm test
+      - name: Resolved dependency tree
+        run: npm ls --depth=0

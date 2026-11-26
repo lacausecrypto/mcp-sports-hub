@@ -12,6 +12,9 @@ name: Publish to MCP Registry
 # during your release), then let this run on the published Release.
 
 on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/publish-registry.yml']
   release:
     types: [published]
   workflow_dispatch: {}

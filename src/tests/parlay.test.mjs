@@ -57,11 +57,11 @@ it('rejects paths, unsupported markets and unbounded inputs before transport', a
   assert.equal(calls, 0);
 });
 it('never caches odds or shares account responses', async () => {
-  const keys=[]; globalThis.fetch = async (url, options) => { keys.push(options.headers['X-API-Key']); return ok({ sequence: keys.length }); };
+  const keys=[]; globalThis.fetch = async (url, options) => { keys.push(options.headers['X-API-Key']); return ok([{ sequence: keys.length }]); };
   const a=handlers('first-private-key'), b=handlers('second-private-key');
-  assert.equal(value(await a.parlay_get_odds({sport_key:'basketball_nba'})).sequence,1);
-  assert.equal(value(await a.parlay_get_odds({sport_key:'basketball_nba'})).sequence,2);
-  assert.equal(value(await b.parlay_get_odds({sport_key:'basketball_nba'})).sequence,3);
+  assert.equal(value(await a.parlay_get_odds({sport_key:'basketball_nba'}))[0].sequence,1);
+  assert.equal(value(await a.parlay_get_odds({sport_key:'basketball_nba'}))[0].sequence,2);
+  assert.equal(value(await b.parlay_get_odds({sport_key:'basketball_nba'}))[0].sequence,3);
   assert.deepEqual(keys,['first-private-key','first-private-key','second-private-key']);
 });
 it('sanitizes HTTP and network failures without retries', async () => {
@@ -88,8 +88,37 @@ it('lists and invokes read-only tools through an actual MCP connection', async (
   const server=new McpServer({name:'parlay-test',version:'0.0.0'}); const finalize=captureToolAnnotations(server); register(server); finalize();
   const client=new Client({name:'test-client',version:'0.0.0'}); const [a,b]=InMemoryTransport.createLinkedPair();
   await server.connect(a); await client.connect(b);
-  try { const listed=await client.listTools(); assert.equal(listed.tools.length,3); for(const t of listed.tools) assert.equal(t.annotations.readOnlyHint,true);
+  try { const listed=await client.listTools(); assert.equal(listed.tools.length,3); for (const t of listed.tools) {
+      const accountRead = t.name === 'parlay_get_odds';
+      assert.equal(t.annotations.readOnlyHint, !accountRead);
+      assert.equal(t.annotations.idempotentHint, !accountRead);
+      assert.equal(t.annotations.openWorldHint, true);
+    }
     const response=await client.callTool({name:'parlay_get_sports',arguments:{}}); assert.deepEqual(value(response),[{key:'basketball_nba'}]);
     const invalid=await client.callTool({name:'parlay_get_odds',arguments:{sport_key:'../unsafe'}}); assert.equal(invalid.isError,true);
   } finally { await client.close(); await server.close(); }
+});
+
+it('keeps credential-bearing URLs and full upstream errors out of results and logs', async (t) => {
+  const key = 'private-fixture-key';
+  const bodyMarker = 'private-upstream-context';
+  const url = 'https://parlay-api.com/v1/example?apiKey=' + key;
+  const captured = [];
+  for (const method of ['log', 'info', 'warn', 'error', 'debug']) {
+    t.mock.method(console, method, (...args) => captured.push(args.map(String).join(' ')));
+  }
+  const tools = handlers(key);
+  const failures = [
+    async () => new Response(bodyMarker + url, {status: 500}),
+    async () => { throw new Error(bodyMarker + url); },
+    async () => ok({error: bodyMarker}),
+    async () => new Response(bodyMarker),
+  ];
+  for (const failure of failures) {
+    globalThis.fetch = failure;
+    const response = await tools.parlay_get_odds({sport_key: 'basketball_nba'});
+    assert.equal(response.isError, true);
+    const output = JSON.stringify(response) + captured.join('\n');
+    for (const marker of [key, url, bodyMarker]) assert.ok(!output.includes(marker));
+  }
 });

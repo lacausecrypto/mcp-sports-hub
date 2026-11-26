@@ -103,7 +103,7 @@ These providers work out of the box. Just build and run.
 
 > **Tip**: Use `SPORTS_HUB_PROVIDERS=free` to load only these 19 providers (~165 tools).
 
-### Free tier with API key — signup required, no credit card (24 providers, ~248 tools)
+### Free tier with API key — signup required, no credit card (23 providers, ~245 tools)
 
 Registration takes 1-2 minutes. All keys are free.
 
@@ -122,7 +122,6 @@ Registration takes 1-2 minutes. All keys are free.
 | `odds_` | The Odds API | 70+ sports odds | 9 | 500 req/mo | [Sign up](https://the-odds-api.com/) |
 | `oddsio_` | Odds-API.io | 34 sports odds | 10 | Free account | [Sign up](https://odds-api.io/) |
 | `sgo_` | Sports Game Odds | 55+ leagues odds | 10 | Trial | [Sign up](https://sportsgameodds.com/) |
-| `parlay_` | [ParlayAPI](https://parlay-api.com/) | Sport/bookmaker catalogs and filtered odds | 3 | [Current plans](https://parlay-api.com/pricing) | [Dashboard](https://parlay-api.com/dashboard) |
 | `lumify_` | Lumify | Odds, splits + AI bet analysis (8 sports) | 14 | Free trial key | [Sign up](https://lumify.ai/) |
 | `mma_` | Fighting Tomatoes | MMA | 8 | 200 req/mo | [Sign up](https://fightingtomatoes.com/) |
 | `livegolf_` | Live Golf API | Golf (PGA/DP World) | 8 | Free tier | [Sign up](https://livegolfapi.com/) |
@@ -133,6 +132,12 @@ Registration takes 1-2 minutes. All keys are free.
 | `cfbd_` | College Football Data | NCAA football | 14 | 1000 req/mo | [Sign up](https://collegefootballdata.com/key) |
 | `boxing_` | Boxing Data API | Pro boxing (fighters/bouts/titles) | 8 | 100 req/mo | [Sign up](https://rapidapi.com/) |
 | `highlightly_` | Highlightly | Multi-sport highlights + odds | 6 | 100 req/day | [Sign up](https://highlightly.net/) |
+
+### Private research account (1 provider, 3 tools)
+
+| Prefix | Provider | Data | Tools | Account |
+| --- | --- | --- | --- | --- |
+| `parlay_` | [ParlayAPI](https://parlay-api.com/) | Sport and bookmaker catalogs, filtered odds | 3 | Public discovery and account-billed odds in a private stdio session |
 
 > Providers with missing keys don't block the server — they just return an error when called. Register keys incrementally as you need them.
 
@@ -235,7 +240,6 @@ export SPORTSDATA_IO_KEY="your-key"             # https://sportsdata.io/
 export THE_ODDS_API_KEY="your-key"              # https://the-odds-api.com/
 export ODDS_API_IO_KEY="your-key"               # https://odds-api.io/
 export SPORTS_GAME_ODDS_KEY="your-key"          # https://sportsgameodds.com/
-export PARLAY_API_KEY="your-key"               # https://parlay-api.com/dashboard
 export FIGHTING_TOMATOES_API_KEY="your-key"     # https://fightingtomatoes.com/
 export LIVE_GOLF_API_KEY="your-key"             # https://livegolfapi.com/
 export ISPORTSAPI_KEY="your-key"                # https://www.isportsapi.com/
@@ -277,9 +281,13 @@ Start with a narrow request:
 
 Ask your MCP client to call `parlay_get_odds` with these arguments. Catalog entries describe supported keys, not guaranteed coverage for every sport, book and market combination. Check the returned fixtures, market identities and source timestamps before comparing prices. Do not treat a missing or truncated result as a complete board.
 
-This provider makes bounded requests without an additional local cache or automatic retries. Odds requests can consume account credits; use specific filters and check [current plans](https://parlay-api.com/pricing) before repeated calls.
+The two catalog requests are anonymous. The odds request uses your account’s credits. For a standard head-to-head market in one region, the documented cost is one credit per request. Limits depend on the plan. The provider makes one request per invocation and caps the upstream response at 4 MiB. The hub’s output limit can reduce what the client sees. [Current plans](https://parlay-api.com/pricing) and [API documentation](https://parlay-api.com/docs).
 
-Use this integration in your private process for personal analysis or internal tools. Keep your key private and do not expose a shared service backed by it. Sharing this MIT-licensed integration does not grant public odds display, shared-feed or redistribution rights. [ParlayAPI documentation](https://parlay-api.com/docs).
+Odds include bookmaker verification metadata when supplied. Use `verified_at` for a source check and `line_changed_at` for a price change. A missing clock leaves that time unknown. The time the client received the response is a separate observation.
+
+Use one private stdio process per account. The HTTP server omits this provider, including when the odds or all-provider preset is selected. Free access covers personal evaluation and non-commercial research. Paid self-serve access also permits internal analysis within the subscribing entity. Public display, customer-facing use and redistribution require a separate signed agreement. [ParlayAPI terms, section 4](https://parlay-api.com/terms).
+
+To check the live contract in a private environment, set `PARLAY_API_KEY` to a designated test key and run `npm run test:parlay-contract`. The check makes two public catalog calls and one account-backed request for NBA head-to-head American odds from DraftKings in the US. Set `PARLAY_TEST_SPORT` and `PARLAY_TEST_BOOK` to select another in-season combination. It requires a matching priced row and prints only structural results. Run it separately from the offline suite.
 
 ### Response size and the `fields` parameter
 

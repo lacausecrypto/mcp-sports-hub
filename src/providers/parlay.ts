@@ -72,6 +72,7 @@ async function request(path: string, params?: Record<string, string>, apiKey?: s
     if (apiKey && JSON.stringify(parsed).includes(apiKey)) {
       return errorResult("ParlayAPI response contained credential material and was refused.");
     }
+    if (!Array.isArray(parsed)) return errorResult("ParlayAPI returned an unexpected response structure.");
     return toolResult(parsed);
   } catch {
     return errorResult(`ParlayAPI request failed or timed out. Check connectivity and ${DOCS}`);
@@ -87,7 +88,7 @@ export function register(server: McpServer): void {
     "List ParlayAPI bookmaker keys and advertised endpoint coverage anonymously. Check returned odds for current priced availability.",
     {}, async () => request("/v1/bookmakers"));
   server.tool("parlay_get_odds",
-    "Get moneylines, spreads or totals using your own PARLAY_API_KEY for private research. Requests may consume account credits. No wagers, payments or public redistribution; no local response cache or automatic retries. Source timestamps are retained.",
+    "Get moneylines, spreads or totals using your own PARLAY_API_KEY for private research. Requests may consume account credits. No wagers, payments or public redistribution; no local response cache or automatic retries. Bookmaker verified_at records a source check and line_changed_at records a price change when supplied. Missing times are unknown.",
     OddsInput.shape,
     async (params) => {
       const input = OddsInput.safeParse(params);

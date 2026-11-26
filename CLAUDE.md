@@ -36,7 +36,7 @@ Uses stdio transport — compatible with any LLM supporting the Model Context Pr
 `sportsdb_` defaults to test key "3" (free, watermarked images). Set `THESPORTSDB_API_KEY` for a personal key.
 `sportsrc_` V1 endpoints are free with no key. V2 (xG, momentum, lineups) needs `SPORTSRC_API_KEY` and is currently NOT exposed.
 
-### API key required (22 providers, ~231 tools)
+### API key required for account tools (24 providers, ~248 tools)
 
 | Prefix | Provider | Env var | Coverage | Tools | Free limit |
 |--------|----------|---------|----------|-------|------------|
@@ -93,7 +93,7 @@ Uses stdio transport — compatible with any LLM supporting the Model Context Pr
 
 Use `parlay_get_sports` and `parlay_get_bookmakers` for anonymous catalog discovery, then `parlay_get_odds` with a specific sport, region, bookmaker and market. Authenticated odds require the user's own `PARLAY_API_KEY`; catalog membership does not guarantee available quotes. Preserve source timestamps and distinguish missing or truncated results from complete coverage. ParlayAPI requests bypass the shared cache and are not retried automatically; odds calls can consume credits.
 
-This integration is for private personal analysis and internal tools. Do not expose the configured key through a shared MCP service or infer public display, shared-feed or redistribution rights from the code license. Documentation: https://parlay-api.com/docs. Current plans: https://parlay-api.com/pricing.
+Use a separate stdio process for each account. The HTTP transport omits ParlayAPI. Free access covers personal evaluation and non-commercial research. Paid self-serve access also covers internal analysis within the subscribing entity. Public display and redistribution require a separate signed agreement. See https://parlay-api.com/terms and https://parlay-api.com/pricing.
 
 ## Rate limits — use with care
 
