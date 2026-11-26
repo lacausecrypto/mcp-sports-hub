@@ -1,21 +1,15 @@
 /**
  * Central tool-metadata pass.
  *
- * Every tool in this server is a read-only, idempotent GET against an external
- * sports API. Rather than annotate 370+ call sites across 37 provider files, we
- * capture the RegisteredTool handles as providers register (by wrapping the
- * public `server.tool` method) and then apply uniform annotations + a friendly
- * title to each via the public `RegisteredTool.update()` API.
- *
- * MCP clients use these hints to skip needless confirmation prompts (readOnly /
- * idempotent) and to display human-friendly titles; several MCP directories
- * also require annotations for listing.
+ * Capture each sports-data tool at registration and apply a readable title and
+ * its MCP hints. A credit-consuming lookup has an account side effect even
+ * when the upstream resource is retrieved by GET.
  */
 
 import type { McpServer, RegisteredTool } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 
-/** All tools here are read-only lookups; data is external/unbounded (open world). */
+/** Default hints for read-only lookups against external sports data. */
 export const READ_ONLY_ANNOTATIONS: ToolAnnotations = {
   readOnlyHint: true,
   idempotentHint: true,
@@ -60,7 +54,11 @@ export function captureToolAnnotations(server: McpServer): () => void {
     target.tool = original;
     for (const { name, reg } of handles) {
       try {
-        (reg.update as ToolUpdate)({ title: deriveTitle(name), annotations: READ_ONLY_ANNOTATIONS });
+        // Repeating a private odds read can debit another account credit.
+        const annotations = name === "parlay_get_odds"
+          ? { ...READ_ONLY_ANNOTATIONS, readOnlyHint: false, destructiveHint: false, idempotentHint: false }
+          : READ_ONLY_ANNOTATIONS;
+        (reg.update as ToolUpdate)({ title: deriveTitle(name), annotations });
       } catch {
         // SDK internals changed shape — leave the tool unannotated rather than crash.
       }

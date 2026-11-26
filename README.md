@@ -12,8 +12,8 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Providers-42-orange" alt="42 Providers">
-  <img src="https://img.shields.io/badge/Tools-410-green" alt="410 Tools">
+  <img src="https://img.shields.io/badge/Providers-43-orange" alt="43 Providers">
+  <img src="https://img.shields.io/badge/Tools-413-green" alt="413 Tools">
   <a href="https://registry.modelcontextprotocol.io"><img src="https://img.shields.io/badge/MCP_Registry-published-8B5CF6?logo=anthropic&logoColor=white" alt="MCP Registry"></a>
 </p>
 
@@ -25,7 +25,7 @@
   <img src="https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white" alt="TypeScript">
 </p>
 
-A unified MCP server that aggregates **42 sports API providers** into a single service. **410 tools** covering scores, stats, odds, esports, college sports, chess, motorsport, boxing, AFL, and more across 70+ sports.
+A unified MCP server that aggregates **43 sports API providers** into a single service. **413 tools** covering scores, stats, odds, esports, college sports, chess, motorsport, boxing, AFL, and more across 70+ sports.
 
 > Each provider works independently. You only need API keys for the providers you use. Missing keys don't block startup — tools return an error when called without their key.
 
@@ -73,7 +73,7 @@ Uses the **stdio transport** from the [MCP SDK](https://modelcontextprotocol.io)
 
 **Requirements**: Node.js 18+, npm.
 
-## Providers (42)
+## Providers (43)
 
 ### Works instantly — no API key, no signup (19 providers, ~165 tools)
 
@@ -132,6 +132,12 @@ Registration takes 1-2 minutes. All keys are free.
 | `cfbd_` | College Football Data | NCAA football | 14 | 1000 req/mo | [Sign up](https://collegefootballdata.com/key) |
 | `boxing_` | Boxing Data API | Pro boxing (fighters/bouts/titles) | 8 | 100 req/mo | [Sign up](https://rapidapi.com/) |
 | `highlightly_` | Highlightly | Multi-sport highlights + odds | 6 | 100 req/day | [Sign up](https://highlightly.net/) |
+
+### Private research account (1 provider, 3 tools)
+
+| Prefix | Provider | Data | Tools | Account |
+| --- | --- | --- | --- | --- |
+| `parlay_` | [ParlayAPI](https://parlay-api.com/) | Sport and bookmaker catalogs, filtered odds | 3 | Public discovery and account-billed odds in a private stdio session |
 
 > Providers with missing keys don't block the server — they just return an error when called. Register keys incrementally as you need them.
 
@@ -257,6 +263,32 @@ set API_SPORTS_KEY=your-key
 set PANDASCORE_TOKEN=your-token
 ```
 
+### ParlayAPI: private odds research
+
+Enable `SPORTS_HUB_PROVIDERS=parlay` for three focused tools, or use the `odds` preset to load it alongside the other odds providers. `parlay_get_sports` and `parlay_get_bookmakers` discover public catalog keys without authentication. `parlay_get_odds` requires your own `PARLAY_API_KEY`, sent in the `X-API-Key` header.
+
+Start with a narrow request:
+
+```json
+{
+  "sport_key": "americanfootball_nfl",
+  "regions": ["us"],
+  "bookmakers": ["draftkings"],
+  "markets": ["h2h"],
+  "odds_format": "decimal"
+}
+```
+
+Ask your MCP client to call `parlay_get_odds` with these arguments. Catalog entries describe supported keys, not guaranteed coverage for every sport, book and market combination. Check the returned fixtures, market identities and source timestamps before comparing prices. Do not treat a missing or truncated result as a complete board.
+
+The two catalog requests are anonymous. The odds request uses your account’s credits. For a standard head-to-head market in one region, the documented cost is one credit per request. Limits depend on the plan. The provider makes one request per invocation and caps the upstream response at 4 MiB. The hub’s output limit can reduce what the client sees. [Current plans](https://parlay-api.com/pricing) and [API documentation](https://parlay-api.com/docs).
+
+Odds include bookmaker verification metadata when supplied. Use `verified_at` for a source check and `line_changed_at` for a price change. A missing clock leaves that time unknown. The time the client received the response is a separate observation.
+
+Use one private stdio process per account. The HTTP server omits this provider, including when the odds or all-provider preset is selected. Free access covers personal evaluation and non-commercial research. Paid self-serve access also permits internal analysis within the subscribing entity. Public display, customer-facing use and redistribution require a separate signed agreement. [ParlayAPI terms, section 4](https://parlay-api.com/terms).
+
+To check the live contract in a private environment, set `PARLAY_API_KEY` to a designated test key and run `npm run test:parlay-contract`. The check makes two public catalog calls and one account-backed request for NBA head-to-head American odds from DraftKings in the US. Set `PARLAY_TEST_SPORT` and `PARLAY_TEST_BOOK` to select another in-season combination. It requires a matching priced row and prints only structural results. Run it separately from the offline suite.
+
 ### Response size and the `fields` parameter
 
 Sports APIs return very wide objects, and every byte a tool returns is spent from the model's context window. A single `espn_get_scoreboard`-style team listing is ~300 KB of JSON, of which the part anyone wants is under 3 KB.
@@ -336,7 +368,7 @@ By default, only the **free preset** is loaded (19 providers, ~165 tools — no 
 # Default — free providers only (no config needed)
 npx mcp-sports-hub
 
-# Load ALL 42 providers (410 tools)
+# Load ALL 43 providers (413 tools)
 SPORTS_HUB_PROVIDERS=all npx mcp-sports-hub
 
 # Use a preset
@@ -354,14 +386,14 @@ SPORTS_HUB_PROVIDERS=-sportsdata,-mma npx mcp-sports-hub
 | Preset | Providers | Tools | Needs keys? |
 |--------|-----------|-------|-------------|
 | `free` (default) | 19 no-key providers (espn, nhl, mlb, f1, openf1, openliga, sportsdb, ncaa, sportsrc, lichess, chesscom, squiggle, motogp, formulae, nascar, opendota, sleeper, euroleague, footballdatauk) | ~165 | No |
-| `all` | all 42 providers | 410 | Yes (for key-required providers) |
+| `all` | all 43 providers | 413 | Yes (for key-required providers) |
 | `chess` | lichess, chesscom | 14 | No |
 | `us-major` | espn, nhl, mlb, ncaa, cfbd, bdl, msf, nascar, sleeper | ~93 | Some |
 | `soccer` | espn, apifootball, footballdata, sportmonks, openliga, sportsrc, footballdatauk, highlightly | ~73 | Some |
 | `f1` | f1, openf1 | 25 | No |
 | `motorsport` | f1, openf1, motogp, formulae, nascar | ~42 | No |
 | `esports` | pandascore, opendota | 25 | Some |
-| `odds` | odds, oddsio, sgo, lumify | 43 | Yes |
+| `odds` | odds, oddsio, sgo, lumify, parlay | 46 | Yes |
 | `cricket` | cricket, entitycricket | 22 | Yes |
 | `golf` | livegolf, golfcourse | 14 | Some |
 
@@ -417,7 +449,7 @@ Beyond tools, the server exposes:
 - `sportshub://presets` — all presets and the providers they load
 - `sportshub://provider/{key}` — details for one provider (with key autocompletion)
 
-**Prompts** (curated slash-command workflows over the 410 tools):
+**Prompts** (curated slash-command workflows over the 413 tools):
 - `whats-on-today` · `compare-odds {event}` · `motorsport-weekend {series}` · `league-standings {league}` · `team-deep-dive {team}` · `f1-race {season} {round}`
 
 All tools are annotated `readOnly` / `idempotent` so clients can skip confirmation prompts.
@@ -426,7 +458,7 @@ All tools are annotated `readOnly` / `idempotent` so clients can skip confirmati
 
 ```
 src/
-├── index.ts                    # Imports + registers all 42 providers; transports
+├── index.ts                    # Imports + registers all 43 providers; transports
 ├── shared/
 │   ├── http.ts                 # fetchJson, fetchText, buildUrl, toolResult, errorResult
 │   │                           #   + retry/backoff, coalescing, keyed cache

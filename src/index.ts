@@ -50,6 +50,7 @@ const PROVIDERS: Record<string, () => Promise<{ register: (s: McpServer) => void
   oddsio:         () => import("./providers/odds-api-io.js"),
   sgo:            () => import("./providers/sports-game-odds.js"),
   lumify:         () => import("./providers/lumify.js"),
+  parlay:         () => import("./providers/parlay.js"),
   mma:            () => import("./providers/fighting-tomatoes.js"),
   livegolf:       () => import("./providers/live-golf.js"),
   isports:        () => import("./providers/isportsapi.js"),
@@ -68,7 +69,7 @@ const PROVIDERS: Record<string, () => Promise<{ register: (s: McpServer) => void
 // SPORTS_HUB_PROVIDERS controls which providers to load.
 //
 //   Not set / empty    → load "free" preset (19 providers, ~165 tools)
-//   "all"              → load ALL 41 providers (396 tools)
+//   "all"              → load all providers
 //   "espn,nhl,mlb"     → load only these 3 (36 tools)
 //   "-odds,-oddsio"    → load all EXCEPT these (prefix with -)
 //   "us-major,-cfbd"   → a preset minus some of its members
@@ -136,7 +137,7 @@ const INSTRUCTIONS = [
   "~300 KB, of which the useful part is under 3 KB. Responses over the size cap are",
   "truncated and say so; `fields` is how you avoid that.",
   "",
-  "All tools are read-only GETs. A successful response with empty lists usually means",
+  "These tools use GET. Account-backed odds lookups can consume credits. Empty lists usually mean",
   "the season/date/league has no data, not that the call was wrong.",
 ].join("\n");
 
@@ -169,7 +170,7 @@ async function buildServer(selected: string[], verbose: boolean): Promise<McpSer
   }
 
   restorePipeline();
-  // All tools are read-only GETs — annotate them (readOnly/idempotent/openWorld)
+  // Apply the registered tool hints, including the account-billed lookup.
   // and give each a friendly title, in one place, using public SDK APIs.
   applyAnnotations();
 
@@ -188,11 +189,14 @@ async function buildServer(selected: string[], verbose: boolean): Promise<McpSer
 // ---------------------------------------------------------------------------
 
 async function main() {
-  const selected = resolveProviders();
-  const isAll = selected.length === Object.keys(PROVIDERS).length;
-
-  // Transport: stdio (default) or HTTP (--http flag or SPORTS_HUB_HTTP=1)
   const useHttp = process.argv.includes("--http") || process.env.SPORTS_HUB_HTTP === "1";
+  const requested = resolveProviders();
+  // A process-level ParlayAPI key belongs to one account, across all HTTP sessions.
+  const selected = useHttp ? requested.filter((name) => name !== "parlay") : requested;
+  if (selected.length !== requested.length) {
+    console.error("ParlayAPI requires a private stdio process and was omitted from HTTP.");
+  }
+  const isAll = selected.length === Object.keys(PROVIDERS).length;
 
   const portRaw = process.env.SPORTS_HUB_PORT ?? "3000";
   const port = Number.parseInt(portRaw, 10);
@@ -204,7 +208,7 @@ async function main() {
   // Warn about tool bloat
   if (isAll) {
     console.error("");
-    console.error(`  ⚠ All ${Object.keys(PROVIDERS).length} providers loaded (396 tools).`);
+    console.error(`  ⚠ All ${Object.keys(PROVIDERS).length} providers loaded (413 tools).`);
     console.error("    LLMs work best with fewer tools. Consider using a preset:");
     console.error("    SPORTS_HUB_PROVIDERS=free        → 19 providers, ~165 tools (no keys needed)");
     console.error("    SPORTS_HUB_PROVIDERS=us-major    → 9 providers, ~93 tools");
